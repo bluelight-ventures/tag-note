@@ -1,0 +1,67 @@
+services:
+  tagnote:
+    build: .
+    ports:
+      - "3777:3000"
+    volumes:
+      - tagnote-data:/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-tagnote-dev-secret}
+      - TAGNOTE_TEST_MODE=${TAGNOTE_TEST_MODE:-0}
+    restart: unless-stopped
+    networks:
+      - tagnote-dev
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    restart: unless-stopped
+    volumes:
+      - vm-data:/victoria-metrics-data
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "-promscrape.config=/etc/prometheus/prometheus.yml"
+      - "-retentionPeriod=30d"
+    networks:
+      - tagnote-dev
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=http://localhost:3777/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    networks:
+      - tagnote-dev
+    depends_on:
+      - victoriametrics
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "3778:80"
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    networks:
+      - tagnote-dev
+    depends_on:
+      - tagnote
+      - grafana
+
+volumes:
+  tagnote-data:
+  vm-data:
+  grafana-data:
+
+networks:
+  tagnote-dev:

@@ -1,0 +1,52 @@
+# Production deployment: Caddy (auto-HTTPS) + TagNote.
+#
+# Copy to server at /opt/tagnote/docker-compose.yml alongside Caddyfile and .env.
+#
+# Required files:
+#   .env       → JWT_SECRET=<openssl rand -hex 32>
+#   Caddyfile  → see Caddyfile in this repo
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - tagnote
+
+  tagnote:
+    image: ${TAGNOTE_IMAGE:-tagnote:latest}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}
+      - BASE_URL=https://${TAGNOTE_DOMAIN:?set TAGNOTE_DOMAIN in .env}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - TAGNOTE_ALERT_WEBHOOK=${TAGNOTE_ALERT_WEBHOOK:-}
+      # Email configuration (SES takes priority over SMTP)
+      - AWS_SES_ACCESS_KEY=${AWS_SES_ACCESS_KEY:-}
+      - AWS_SES_SECRET_KEY=${AWS_SES_SECRET_KEY:-}
+      - AWS_SES_REGION=${AWS_SES_REGION:-us-east-1}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@example.com}
+      # Admin configuration
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-data:
+  caddy-config:

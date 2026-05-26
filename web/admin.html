@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin - TagNote</title>
+    <script>(function(){var t=localStorage.getItem('tagnote_theme');if(t){document.documentElement.setAttribute('data-theme',t);}else{document.documentElement.setAttribute('data-theme','everforest-light');}})()</script>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .admin-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .admin-header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .admin-header-actions a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .admin-header-actions a:hover {
+            text-decoration: underline;
+        }
+
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .overview-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+        .overview-card .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .overview-card .value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .overview-card .sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .section-header .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .data-table th {
+            background: var(--bg-sidebar);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .data-table td {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        .data-table tr:hover td {
+            background: var(--bg-sidebar);
+        }
+        .data-table .clickable {
+            cursor: pointer;
+            color: var(--accent);
+        }
+        .data-table .clickable:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2em 0.5em;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: var(--badge-approved-bg);
+            color: var(--badge-approved-text);
+        }
+        .badge-warning {
+            background: var(--badge-unreviewed-bg);
+            color: var(--badge-unreviewed-text);
+        }
+        .badge-error {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .status-code {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .status-2xx { color: var(--green); }
+        .status-3xx { color: var(--blue); }
+        .status-4xx { color: var(--badge-unreviewed-text); }
+        .status-5xx { color: var(--red); }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: var(--bg-sidebar);
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination .page-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .grafana-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--accent);
+            color: var(--bg-on-accent);
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-weight: 500;
+            transition: background var(--transition);
+        }
+        .grafana-link:hover {
+            background: var(--accent-hover);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        .filter-bar input,
+        .filter-bar select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        .filter-bar button {
+            padding: 0.5rem 1rem;
+            background: var(--accent);
+            color: var(--bg-on-accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .filter-bar .clear-btn {
+            background: var(--bg-sidebar);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .error-banner {
+            background: var(--red-bg);
+            color: var(--red);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+
+        .time-ago {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 1rem;
+            }
+            .overview-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .data-table {
+                font-size: 0.8rem;
+            }
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>🛠️ Admin Dashboard</h1>
+            <div class="admin-header-actions">
+                <a href="" id="grafana-link" target="_blank">📊 Grafana Dashboards</a>
+                <a href="/app">← Back to App</a>
+            </div>
+        </header>
+
+        <script>
+            // Set Grafana link based on current port
+            // Port 3778 (Caddy) -> /grafana/, Port 3777 (direct) -> localhost:3001/grafana/
+            const grafanaLink = document.getElementById('grafana-link');
+            if (window.location.port === '3777') {
+                grafanaLink.href = 'http://localhost:3001/grafana/';
+            } else {
+                grafanaLink.href = '/grafana/';
+            }
+        </script>
+
+        <div id="error-banner" class="error-banner" style="display: none;"></div>
+
+        <!-- Overview Cards -->
+        <section class="overview-cards" id="overview-cards">
+            <div class="overview-card">
+                <div class="label">Total Users</div>
+                <div class="value" id="total-users">-</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Daily Active</div>
+                <div class="value" id="dau">-</div>
+                <div class="sub">Last 24 hours</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Monthly Active</div>
+                <div class="value" id="mau">-</div>
+                <div class="sub">Last 30 days</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Total Notes</div>
+                <div class="value" id="total-notes">-</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Tags</div>
+                <div class="value" id="total-tags">-</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Trash</div>
+                <div class="value" id="trash-count">-</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">Uptime</div>
+                <div class="value" id="uptime">-</div>
+            </div>
+            <div class="overview-card">
+                <div class="label">DB Size</div>
+                <div class="value" id="db-size">-</div>
+                <div class="sub" id="db-size-bytes">-</div>
+            </div>
+        </section>
+
+        <!-- Registered Users -->
+        <section class="section">
+            <div class="section-header">
+                <h2>Registered Users</h2>
+            </div>
+            <div id="users-table-container">
+                <div class="loading">Loading users...</div>
+            </div>
+        </section>
+
+        <!-- Audit Logs -->
+        <section class="section">
+            <div class="section-header">
+                <h2>Audit Logs</h2>
+            </div>
+            <div class="filter-bar">
+                <input type="text" id="filter-user-id" placeholder="Filter by user ID">
+                <button onclick="filterLogs()">Filter</button>
+                <button class="clear-btn" onclick="clearFilter()">Clear</button>
+            </div>
+            <div id="logs-table-container">
+                <div class="loading">Loading logs...</div>
+            </div>
+            <div class="pagination" id="logs-pagination" style="display: none;">
+                <button id="prev-page" onclick="prevPage()">← Previous</button>
+                <span class="page-info" id="page-info">Page 1</span>
+                <button id="next-page" onclick="nextPage()">Next →</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('tagnote_token');
+        if (!token) {
+            window.location.href = '/app';
+        }
+
+        const API_BASE = '/api/v1/admin';
+        let logsPage = 0;
+        let logsLimit = 50;
+        let logsTotal = 0;
+        let filterUserId = '';
+
+        async function apiFetch(path) {
+            const res = await fetch(API_BASE + path, {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+            if (res.status === 401 || res.status === 403) {
+                document.getElementById('error-banner').textContent = 'Access denied. You must be logged in as admin.';
+                document.getElementById('error-banner').style.display = 'block';
+                throw new Error('Forbidden');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || res.statusText);
+            }
+            return res.json();
+        }
+
+        async function loadOverview() {
+            try {
+                const data = await apiFetch('/overview');
+                document.getElementById('total-users').textContent = data.total_users;
+                document.getElementById('dau').textContent = data.dau;
+                document.getElementById('mau').textContent = data.mau;
+                document.getElementById('total-notes').textContent = data.total_notes;
+                document.getElementById('total-tags').textContent = data.tag_count;
+                document.getElementById('trash-count').textContent = data.trash_count;
+                document.getElementById('uptime').textContent = formatUptime(data.uptime_sec);
+                document.getElementById('db-size').textContent = data.db_size_mb + ' MB';
+                document.getElementById('db-size-bytes').textContent = formatBytes(data.db_size_bytes);
+            } catch (e) {
+                console.error('Failed to load overview:', e);
+            }
+        }
+
+        async function loadUsers() {
+            const container = document.getElementById('users-table-container');
+            try {
+                const users = await apiFetch('/users');
+                if (users.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted);">No users registered.</p>';
+                    return;
+                }
+                let html = `<table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Display Name</th>
+                            <th>Created</th>
+                            <th>Verified</th>
+                            <th>Auth</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                for (const u of users) {
+                    const verified = u.email_verified
+                        ? '<span class="badge badge-success">Verified</span>'
+                        : '<span class="badge badge-warning">Pending</span>';
+                    const auth = [];
+                    if (u.has_password) auth.push('Password');
+                    if (u.has_google) auth.push('Google');
+                    html += `<tr>
+                        <td class="clickable" onclick="filterByUser('${u.id}')">${escapeHtml(u.email)}</td>
+                        <td>${escapeHtml(u.display_name)}</td>
+                        <td class="time-ago">${formatDate(u.created_at)}</td>
+                        <td>${verified}</td>
+                        <td>${auth.join(', ') || '-'}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<p style="color: var(--red);">Failed to load users.</p>';
+            }
+        }
+
+        async function loadLogs() {
+            const container = document.getElementById('logs-table-container');
+            const pagination = document.getElementById('logs-pagination');
+            try {
+                let url = `/logs?limit=${logsLimit}&offset=${logsPage * logsLimit}`;
+                if (filterUserId) {
+                    url += `&user_id=${encodeURIComponent(filterUserId)}`;
+                }
+                const data = await apiFetch(url);
+                logsTotal = data.total;
+
+                if (data.logs.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted);">No audit logs found.</p>';
+                    pagination.style.display = 'none';
+                    return;
+                }
+
+                let html = `<table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Method</th>
+                            <th>Path</th>
+                            <th>Status</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                for (const log of data.logs) {
+                    const statusClass = getStatusClass(log.status);
+                    html += `<tr>
+                        <td class="time-ago">${formatDate(log.created_at)}</td>
+                        <td class="clickable" onclick="filterByUser('${log.user_id}')">${log.user_id.substring(0, 8)}...</td>
+                        <td>${escapeHtml(log.action)}</td>
+                        <td><code>${log.method}</code></td>
+                        <td><code>${escapeHtml(log.path)}</code></td>
+                        <td><span class="status-code ${statusClass}">${log.status}</span></td>
+                        <td>${escapeHtml(log.ip || '-')}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+                // Update pagination
+                const totalPages = Math.ceil(logsTotal / logsLimit);
+                document.getElementById('page-info').textContent = `Page ${logsPage + 1} of ${totalPages} (${logsTotal} total)`;
+                document.getElementById('prev-page').disabled = logsPage === 0;
+                document.getElementById('next-page').disabled = logsPage >= totalPages - 1;
+                pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+            } catch (e) {
+                container.innerHTML = '<p style="color: var(--red);">Failed to load logs.</p>';
+            }
+        }
+
+        function filterByUser(userId) {
+            filterUserId = userId;
+            document.getElementById('filter-user-id').value = userId;
+            logsPage = 0;
+            loadLogs();
+        }
+
+        function filterLogs() {
+            filterUserId = document.getElementById('filter-user-id').value.trim();
+            logsPage = 0;
+            loadLogs();
+        }
+
+        function clearFilter() {
+            filterUserId = '';
+            document.getElementById('filter-user-id').value = '';
+            logsPage = 0;
+            loadLogs();
+        }
+
+        function prevPage() {
+            if (logsPage > 0) {
+                logsPage--;
+                loadLogs();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(logsTotal / logsLimit);
+            if (logsPage < totalPages - 1) {
+                logsPage++;
+                loadLogs();
+            }
+        }
+
+        function formatUptime(seconds) {
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        function formatDate(isoStr) {
+            const d = new Date(isoStr);
+            return d.toLocaleString();
+        }
+
+        function getStatusClass(status) {
+            if (status >= 200 && status < 300) return 'status-2xx';
+            if (status >= 300 && status < 400) return 'status-3xx';
+            if (status >= 400 && status < 500) return 'status-4xx';
+            return 'status-5xx';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
+        }
+
+        // Initial load
+        loadOverview();
+        loadUsers();
+        loadLogs();
+
+        // Auto-refresh overview every 60 seconds
+        setInterval(loadOverview, 60000);
+    </script>
+</body>
+</html>

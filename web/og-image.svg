@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1f2937"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative tag pills -->
+  <rect x="700" y="160" width="100" height="40" rx="20" fill="#2563eb" opacity="0.3"/>
+  <text x="750" y="186" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="#60a5fa">#work</text>
+
+  <rect x="820" y="160" width="100" height="40" rx="20" fill="#2563eb" opacity="0.3"/>
+  <text x="870" y="186" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="#60a5fa">#ideas</text>
+
+  <rect x="700" y="215" width="110" height="40" rx="20" fill="#7c3aed" opacity="0.25"/>
+  <text x="755" y="241" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="#a78bfa">#health</text>
+
+  <rect x="830" y="215" width="120" height="40" rx="20" fill="rgba(255,255,255,0.08)"/>
+  <text x="890" y="241" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,0.35)">#reading</text>
+
+  <rect x="700" y="270" width="100" height="40" rx="20" fill="rgba(255,255,255,0.08)"/>
+  <text x="750" y="296" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,0.35)">#travel</text>
+
+  <rect x="820" y="270" width="120" height="40" rx="20" fill="rgba(255,255,255,0.08)"/>
+  <text x="880" y="296" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,0.35)">#recipes</text>
+
+  <rect x="700" y="325" width="130" height="40" rx="20" fill="#16a34a" opacity="0.25"/>
+  <text x="765" y="351" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="#4ade80">#personal</text>
+
+  <rect x="850" y="325" width="100" height="40" rx="20" fill="rgba(255,255,255,0.08)"/>
+  <text x="900" y="351" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,0.35)">#goals</text>
+
+  <!-- Icon -->
+  <rect x="80" y="140" width="56" height="56" rx="12" fill="rgba(255,255,255,0.12)"/>
+  <g transform="translate(84,144) scale(0.35)">
+    <path d="M20 28c0-6.63 5.37-12 12-12h63.4c3.18 0 6.24 1.27 8.49 3.52l46 46a12 12 0 010 16.97L105 127.49a12 12 0 01-16.97 0l-46-46A12 12 0 0138.5 73H32c-6.63 0-12-5.37-12-12V28z" fill="none" stroke="#ffffff" stroke-width="9"/>
+    <circle cx="52" cy="48" r="9" fill="#ffffff"/>
+    <line x1="68" y1="60" x2="104" y2="60" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="68" y1="76" x2="94" y2="76" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Title -->
+  <text x="80" y="260" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="56" font-weight="800" fill="#ffffff" letter-spacing="-1">TagNote</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="320" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="28" font-weight="400" fill="#9ca3af">Tag your thinking.</text>
+  <text x="80" y="360" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="28" font-weight="700" fill="url(#accent)">Find it instantly.</text>
+
+  <!-- Tagline -->
+  <text x="80" y="440" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" fill="#6b7280">Organize notes with tags, filter by any combination,</text>
+  <text x="80" y="468" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" fill="#6b7280">and your notes reshape around your focus.</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="590" width="1200" height="40" fill="rgba(255,255,255,0.04)"/>
+  <text x="80" y="616" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="600" fill="#6b7280">Tags · Search · Markdown · Priorities · Themes · PWA</text>
+</svg>

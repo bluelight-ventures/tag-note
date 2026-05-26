@@ -1,0 +1,40 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    restart: unless-stopped
+    volumes:
+      - vm-data:/victoria-metrics-data
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "-promscrape.config=/etc/prometheus/prometheus.yml"
+      - "-retentionPeriod=90d"
+    ports:
+      - "8428:8428"
+    networks:
+      - tagnote-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=https://${TAGNOTE_DOMAIN}/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    ports:
+      - "3001:3000"
+    networks:
+      - tagnote-network
+    depends_on:
+      - victoriametrics
+
+volumes:
+  vm-data:
+  grafana-data:
+
+networks:
+  tagnote-network:
+    external: true

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>Privacy Policy — TagNote</title>
+    <meta name="description" content="TagNote privacy policy. How we handle your data, what we collect, and your rights.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon-192.svg">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #fafafa;
+            --bg-card: #ffffff;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent: #111827;
+            --accent-hover: #374151;
+            --border: #e5e7eb;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== Nav ===== */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(250, 250, 250, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-brand svg {
+            flex-shrink: 0;
+            border-radius: 4px;
+        }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            background: var(--accent) !important;
+            color: #fff !important;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600 !important;
+            transition: background 0.15s;
+        }
+        .nav-cta:hover { background: var(--accent-hover) !important; }
+
+        /* ===== Content ===== */
+        .content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+        .content h1 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .content .last-updated {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 48px;
+        }
+        .content h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 12px;
+        }
+        .content p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+        .content ul {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+        .content li {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.7;
+        }
+        .content a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        .content a:hover {
+            color: var(--accent-hover);
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .footer-brand svg {
+            border-radius: 4px;
+        }
+        .footer-brand span {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .footer p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+        .footer a:hover { color: var(--text); }
+        .footer-links {
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .footer-links a {
+            margin: 0 8px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links a:not(.nav-cta) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="/" class="nav-brand">
+            <svg width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#111827"/><path d="M8 10.5C8 9.67 8.67 9 9.5 9H17.59c.4 0 .78.16 1.06.44l5.91 5.91a1.5 1.5 0 010 2.12l-6.21 6.21a1.5 1.5 0 01-2.12 0l-5.91-5.91A1.5 1.5 0 019.88 17H9.5A1.5 1.5 0 018 15.5V10.5z" fill="none" stroke="#e5e7eb" stroke-width="1.5"/><circle cx="12.5" cy="13" r="1.5" fill="#e5e7eb"/></svg>
+            TagNote
+        </a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/app" class="nav-cta">Open App</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Privacy Policy -->
+<div class="content">
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last updated: March 3, 2026</p>
+
+    <p>TagNote ("we", "us", or "our") is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.</p>
+
+    <h2>1. Information We Collect</h2>
+    <p>We collect the minimum information necessary to provide the TagNote service:</p>
+    <ul>
+        <li><strong>Account information:</strong> Your email address, display name, and a securely hashed password when you register. If you sign in with Google, we receive your email, name, and Google account ID.</li>
+        <li><strong>Notes and tags:</strong> The content you create within TagNote, including notes, tags, and your organizational preferences.</li>
+        <li><strong>Uploaded images:</strong> Images you attach to your notes are stored on our servers.</li>
+    </ul>
+
+    <h2>2. How We Use Your Information</h2>
+    <p>We use your information solely to:</p>
+    <ul>
+        <li>Provide, maintain, and improve the TagNote service</li>
+        <li>Authenticate your identity and secure your account</li>
+        <li>Send account-related emails (verification, password reset) when applicable</li>
+    </ul>
+    <p>We do not use your data for advertising, profiling, or any purpose unrelated to providing the service.</p>
+
+    <h2>3. Data Storage and Security</h2>
+    <p>Your data is stored in a SQLite database on our server. We take reasonable measures to protect your information, including:</p>
+    <ul>
+        <li>Passwords are hashed using bcrypt and never stored in plain text</li>
+        <li>All connections are encrypted with HTTPS/TLS</li>
+        <li>Authentication uses signed JWT tokens</li>
+        <li>The server is hardened with firewall rules, SSH key authentication, and automatic security updates</li>
+    </ul>
+
+    <h2>4. Data Sharing</h2>
+    <p>We do not sell, rent, or share your personal information with third parties. Your notes and tags are private to your account. We may disclose information only if required by law.</p>
+
+    <h2>5. Cookies and Tracking</h2>
+    <p>TagNote does not use cookies for tracking or analytics. We store your authentication token and theme preference in your browser's local storage to keep you logged in and remember your settings.</p>
+
+    <h2>6. Data Export and Deletion</h2>
+    <p>You can export all your data (notes, tags, and settings) at any time using the export feature in the app. If you wish to delete your account and all associated data, please contact us at the email below.</p>
+
+    <h2>7. Third-Party Services</h2>
+    <p>If you choose to sign in with Google, Google's privacy policy applies to the authentication process. We only receive your basic profile information (email, name, account ID) and do not access any other Google data.</p>
+
+    <h2>8. Children's Privacy</h2>
+    <p>TagNote is not directed at children under 13 years of age. We do not knowingly collect personal information from children under 13.</p>
+
+    <h2>9. Changes to This Policy</h2>
+    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated "last updated" date. Continued use of TagNote after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>10. Contact</h2>
+    <p>If you have questions about this privacy policy or your data, please contact us at <a href="mailto:privacy@example.com">privacy@example.com</a>.</p>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-brand">
+        <svg width="20" height="20" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#111827"/><path d="M8 10.5C8 9.67 8.67 9 9.5 9H17.59c.4 0 .78.16 1.06.44l5.91 5.91a1.5 1.5 0 010 2.12l-6.21 6.21a1.5 1.5 0 01-2.12 0l-5.91-5.91A1.5 1.5 0 019.88 17H9.5A1.5 1.5 0 018 15.5V10.5z" fill="none" stroke="#e5e7eb" stroke-width="1.5"/><circle cx="12.5" cy="13" r="1.5" fill="#e5e7eb"/></svg>
+        <span>TagNote</span>
+    </div>
+    <p>Tag your thinking. Find it instantly.</p>
+    <div class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+    </div>
+</footer>
+
+</body>
+</html>

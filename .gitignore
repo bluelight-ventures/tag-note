@@ -1,0 +1,27 @@
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/
+uploads/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Build outputs
+bin/
+dist/
+coverage.out
+*.coverprofile
+
+# Editor and OS files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log

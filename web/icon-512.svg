@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="80" fill="#111827"/>
+  <!-- Tag shape -->
+  <path d="M117 162c0-14.36 11.64-26 26-26h140.5c7.07 0 13.86 2.81 18.86 7.81l102.33 102.33a26 26 0 010 36.77L297.33 390.27a26 26 0 01-36.77 0L158.23 287.94a26 26 0 01-7.62-18.38H143c-14.36 0-26-11.64-26-26V162z" fill="none" stroke="#e5e7eb" stroke-width="20"/>
+  <!-- Tag dot -->
+  <circle cx="192" cy="210" r="22" fill="#e5e7eb"/>
+  <!-- Content lines inside tag -->
+  <line x1="225" y1="245" x2="325" y2="245" stroke="#6b7280" stroke-width="14" stroke-linecap="round"/>
+  <line x1="225" y1="285" x2="305" y2="285" stroke="#6b7280" stroke-width="14" stroke-linecap="round"/>
+  <line x1="225" y1="325" x2="280" y2="325" stroke="#6b7280" stroke-width="14" stroke-linecap="round"/>
+</svg>

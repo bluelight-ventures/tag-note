@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+
+Disallow: /app
+Disallow: /app/
+Disallow: /api/
+Disallow: /healthz
+Disallow: /status
+Disallow: /uploads/
+
+Sitemap: https://example.com/sitemap.xml

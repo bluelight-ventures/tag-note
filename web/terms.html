@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>Terms of Service — TagNote</title>
+    <meta name="description" content="TagNote terms of service. The rules and guidelines for using TagNote.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon-192.svg">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #fafafa;
+            --bg-card: #ffffff;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent: #111827;
+            --accent-hover: #374151;
+            --border: #e5e7eb;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== Nav ===== */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(250, 250, 250, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-brand svg {
+            flex-shrink: 0;
+            border-radius: 4px;
+        }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.15s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            background: var(--accent) !important;
+            color: #fff !important;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600 !important;
+            transition: background 0.15s;
+        }
+        .nav-cta:hover { background: var(--accent-hover) !important; }
+
+        /* ===== Content ===== */
+        .content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 120px 24px 80px;
+        }
+        .content h1 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .content .last-updated {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 48px;
+        }
+        .content h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 12px;
+        }
+        .content p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+        .content ul {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+        .content li {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.7;
+        }
+        .content a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        .content a:hover {
+            color: var(--accent-hover);
+        }
+
+        /* ===== Footer ===== */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .footer-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .footer-brand svg {
+            border-radius: 4px;
+        }
+        .footer-brand span {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .footer p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+        .footer a:hover { color: var(--text); }
+        .footer-links {
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .footer-links a {
+            margin: 0 8px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links a:not(.nav-cta) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="/" class="nav-brand">
+            <svg width="26" height="26" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#111827"/><path d="M8 10.5C8 9.67 8.67 9 9.5 9H17.59c.4 0 .78.16 1.06.44l5.91 5.91a1.5 1.5 0 010 2.12l-6.21 6.21a1.5 1.5 0 01-2.12 0l-5.91-5.91A1.5 1.5 0 019.88 17H9.5A1.5 1.5 0 018 15.5V10.5z" fill="none" stroke="#e5e7eb" stroke-width="1.5"/><circle cx="12.5" cy="13" r="1.5" fill="#e5e7eb"/></svg>
+            TagNote
+        </a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/app" class="nav-cta">Open App</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Terms of Service -->
+<div class="content">
+    <h1>Terms of Service</h1>
+    <p class="last-updated">Last updated: March 3, 2026</p>
+
+    <p>Welcome to TagNote. By accessing or using TagNote ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, please do not use the Service.</p>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>By creating an account or using TagNote, you confirm that you are at least 13 years old and agree to these Terms and our <a href="/privacy">Privacy Policy</a>.</p>
+
+    <h2>2. Your Account</h2>
+    <p>You are responsible for maintaining the security of your account credentials. You agree to:</p>
+    <ul>
+        <li>Provide accurate information when registering</li>
+        <li>Keep your password secure and not share it with others</li>
+        <li>Notify us immediately if you suspect unauthorized access to your account</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that violate these Terms.</p>
+
+    <h2>3. Your Content</h2>
+    <p>You retain full ownership of the notes, tags, and other content you create in TagNote. We do not claim any rights to your content. You grant us a limited license to store, display, and transmit your content solely for the purpose of providing the Service to you.</p>
+    <p>You are responsible for the content you create. You agree not to use TagNote to store or distribute content that is illegal, harmful, or infringes on the rights of others.</p>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+        <li>Use the Service for any unlawful purpose</li>
+        <li>Attempt to gain unauthorized access to the Service or its infrastructure</li>
+        <li>Interfere with or disrupt the Service or servers</li>
+        <li>Upload malware, viruses, or other harmful code</li>
+        <li>Use automated tools to scrape or overload the Service</li>
+        <li>Impersonate others or misrepresent your identity</li>
+    </ul>
+
+    <h2>5. Service Availability</h2>
+    <p>We strive to keep TagNote available and reliable, but we do not guarantee uninterrupted or error-free service. We may modify, suspend, or discontinue the Service at any time, with or without notice. We are not liable for any downtime or data loss.</p>
+
+    <h2>6. Data and Backups</h2>
+    <p>While we perform regular backups, you are encouraged to use the built-in export feature to maintain your own copies of your data. We are not responsible for data loss due to hardware failure, security incidents, or other circumstances beyond our control.</p>
+
+    <h2>7. Intellectual Property</h2>
+    <p>TagNote, including its design, code, and branding, is our intellectual property. You may not copy, modify, distribute, or reverse-engineer any part of the Service except as permitted by applicable law.</p>
+
+    <h2>8. Limitation of Liability</h2>
+    <p>TagNote is provided "as is" and "as available" without warranties of any kind, whether express or implied. To the fullest extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service.</p>
+
+    <h2>9. Changes to These Terms</h2>
+    <p>We may update these Terms from time to time. Changes will be posted on this page with an updated "last updated" date. Continued use of TagNote after changes constitutes acceptance of the updated Terms.</p>
+
+    <h2>10. Governing Law</h2>
+    <p>These Terms are governed by and construed in accordance with applicable law, without regard to conflict of law principles.</p>
+
+    <h2>11. Contact</h2>
+    <p>If you have questions about these Terms, please contact us at <a href="mailto:support@example.com">support@example.com</a>.</p>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-brand">
+        <svg width="20" height="20" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#111827"/><path d="M8 10.5C8 9.67 8.67 9 9.5 9H17.59c.4 0 .78.16 1.06.44l5.91 5.91a1.5 1.5 0 010 2.12l-6.21 6.21a1.5 1.5 0 01-2.12 0l-5.91-5.91A1.5 1.5 0 019.88 17H9.5A1.5 1.5 0 018 15.5V10.5z" fill="none" stroke="#e5e7eb" stroke-width="1.5"/><circle cx="12.5" cy="13" r="1.5" fill="#e5e7eb"/></svg>
+        <span>TagNote</span>
+    </div>
+    <p>Tag your thinking. Find it instantly.</p>
+    <div class="footer-links">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+    </div>
+</footer>
+
+</body>
+</html>
