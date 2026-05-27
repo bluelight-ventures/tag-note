@@ -3,7 +3,7 @@ module github.com/runminglu/tag-note
 go 1.26
 
 require (
-	github.com/VictoriaMetrics/metrics v1.35.1
+	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/aws-sdk-go-v2/service/sesv2 v1.61.0
