@@ -61,6 +61,71 @@ docker compose exec tagnote tagnote-login
 2. Open `http://localhost:3777`
 3. Log in with `test@test.com` / `testpass123`
 
+## Frontend E2E Tests
+
+Frontend browser tests use Playwright. Keep Node dependency installation and
+test execution inside Docker; do not run `npm install`, `npm ci`, or Playwright
+browser installs directly on the host.
+
+### Install or update E2E dependencies
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -e npm_config_cache=/tmp/.npm \
+  -v "$PWD":/app \
+  -w /app \
+  node:22-alpine \
+  npm install
+```
+
+### Run E2E tests locally
+
+Build and start the app test container:
+
+```bash
+docker build -t tag-note:e2e .
+
+docker run -d --rm \
+  --name tag-note-e2e-local \
+  -p 13777:3000 \
+  -e JWT_SECRET=e2e-test-secret \
+  -e TAGNOTE_TEST_MODE=1 \
+  tag-note:e2e
+```
+
+Wait for the app to become healthy:
+
+```bash
+for i in $(seq 1 30); do
+  curl -fsS http://127.0.0.1:13777/healthz >/dev/null && break
+  sleep 1
+done
+```
+
+Run Playwright from the official Playwright Docker image:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  --network host \
+  -e E2E_BASE_URL=http://127.0.0.1:13777 \
+  -e npm_config_cache=/tmp/.npm \
+  -v "$PWD":/app \
+  -w /app \
+  mcr.microsoft.com/playwright:v1.60.0-noble \
+  npm run test:e2e
+```
+
+Stop the app container when finished:
+
+```bash
+docker stop tag-note-e2e-local
+```
+
+E2E artifacts are written to `test-results/` and `playwright-report/`; both are
+ignored by Git.
+
 ### API testing examples
 
 ```bash

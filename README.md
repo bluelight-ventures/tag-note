@@ -339,6 +339,9 @@ done
 docker compose up --build
 ```
 
+Frontend E2E tests are documented in `TESTING.md`. They use Playwright and run
+through Docker so Node dependencies and browsers are not installed on the host.
+
 ### Environment Variables
 
 | Variable           | Default              | Description                              |
