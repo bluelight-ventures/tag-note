@@ -3026,6 +3026,7 @@ function renderFeed(notes) {
 function createNoteCard(note) {
     const card = document.createElement('div');
     card.className = 'note-card' + (note.pinned ? ' pinned' : '');
+    card.dataset.testid = 'note-card';
     const color = getPriorityColor(note.tags);
     if (color) {
         card.style.background = color.bg;
@@ -3052,6 +3053,7 @@ function createNoteCard(note) {
     const editBtn = document.createElement('button');
     editBtn.className = 'action-edit';
     editBtn.title = 'Edit';
+    editBtn.dataset.testid = 'edit-note-button';
     editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3061,6 +3063,7 @@ function createNoteCard(note) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'action-delete';
     deleteBtn.title = 'Delete';
+    deleteBtn.dataset.testid = 'delete-note-button';
     deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
     deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -3091,6 +3094,7 @@ function createNoteCard(note) {
     const expandBtn = document.createElement('button');
     expandBtn.className = 'action-expand';
     expandBtn.title = 'Full screen';
+    expandBtn.dataset.testid = 'expand-note-button';
     expandBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
     expandBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3100,6 +3104,7 @@ function createNoteCard(note) {
     const pinBtn = document.createElement('button');
     pinBtn.className = 'note-pin-btn' + (note.pinned ? ' pinned' : '');
     pinBtn.title = note.pinned ? 'Unpin' : 'Pin';
+    pinBtn.dataset.testid = 'pin-note-button';
     pinBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="' + (note.pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.09 6.26L21 9.27l-5 4.87L17.18 21 12 17.77 6.82 21 8 14.14l-5-4.87 6.91-1.01z"/></svg>';
     pinBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -3148,6 +3153,7 @@ function createNoteCard(note) {
     for (const t of (note.tags || [])) {
         const pill = document.createElement('span');
         pill.className = 'tag clickable';
+        pill.dataset.testid = 'note-tag';
         pill.textContent = '#' + t;
         const isActive = currentTags.includes(t);
         if (isActive) {

@@ -14,8 +14,13 @@ uploads/
 # Build outputs
 bin/
 dist/
+node_modules/
 coverage.out
 *.coverprofile
+
+# Playwright
+test-results/
+playwright-report/
 
 # Editor and OS files
 *.swp

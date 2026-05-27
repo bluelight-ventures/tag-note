@@ -10,6 +10,9 @@ data/
 uploads/
 bin/
 dist/
+node_modules/
+test-results/
+playwright-report/
 
 *.db
 *.db-*

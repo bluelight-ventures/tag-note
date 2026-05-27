@@ -40,6 +40,18 @@ docker compose up
 
 **NEVER suggest `go run ./cmd/...` — always use `docker compose up` to run locally.**
 
+### NEVER install Node dependencies on the host
+**NEVER run `npm install`, `npm ci`, `npx playwright install`, or other dependency-installing Node commands directly on the host.**
+Use Docker for Node tooling too, and run the container with the host UID/GID so generated files are not root-owned:
+
+```bash
+# Install/update Node dependencies
+docker run --rm --user "$(id -u):$(id -g)" -e npm_config_cache=/tmp/.npm -v "$(pwd)":/app -w /app node:22-alpine npm install
+
+# Run Playwright tests after the app is already running
+docker run --rm --user "$(id -u):$(id -g)" -e npm_config_cache=/tmp/.npm -v "$(pwd)":/app -w /app --network host mcr.microsoft.com/playwright:v1.60.0-noble npm run test:e2e
+```
+
 ### Releasing a new version
 When asked to "release a new version vX.Y.Z":
 1. Update `CHANGELOG.md` with a new entry for the version (review commits since last release, add under Added/Changed/Fixed sections, update comparison links at the bottom)
