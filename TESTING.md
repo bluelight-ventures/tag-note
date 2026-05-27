@@ -26,7 +26,8 @@ docker build --target test .
 ```
 
 The Dockerfile `test` stage checks formatting with `gofmt -l cmd internal`,
-runs `go vet ./...`, and runs `go test ./...`.
+runs `go vet ./...`, runs `go test ./...`, and runs `govulncheck ./...` with
+the pinned tool version declared in the Dockerfile.
 
 ## API Smoke Tests
 
@@ -146,7 +147,8 @@ ignored by Git.
 
 GitHub Actions currently runs:
 
-- Dockerfile `test` stage: formatting, `go vet ./...`, and `go test ./...`.
+- Dockerfile `test` stage: formatting, `go vet ./...`, `go test ./...`, and
+  `govulncheck ./...`.
 - Docker image build.
 - Playwright E2E tests against a Dockerized app.
 

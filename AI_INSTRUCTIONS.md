@@ -39,9 +39,9 @@ docker compose build
 docker compose up -d
 ```
 
-The Dockerfile `test` stage runs `gofmt -l cmd internal`, `go vet ./...`, and
-`go test ./...`. If dependencies need to be updated, use a temporary Docker
-command only for that maintenance task.
+The Dockerfile `test` stage runs `gofmt -l cmd internal`, `go vet ./...`,
+`go test ./...`, and `govulncheck ./...` with the pinned tool version declared
+in the Dockerfile.
 
 Run the app locally with Docker Compose, not `go run`:
 
@@ -73,6 +73,39 @@ docker run --rm \
   mcr.microsoft.com/playwright:v1.60.0-noble \
   npm run test:e2e
 ```
+
+## Dependency Management
+
+Use reproducible, pinned dependency versions. Do not use dynamic dependency
+selection such as `@latest`, floating Docker tags, or unbounded version ranges
+for project builds, CI, release scripts, or docs.
+
+For Go dependencies:
+
+- Add or update modules with Dockerized `go get module@version`.
+- Commit the resulting `go.mod` and `go.sum` changes.
+- Prefer the latest stable patched release that fixes the issue or provides the
+  needed feature.
+- Do not install Go tools on the host.
+
+For test tools:
+
+- Keep tool versions pinned in Docker-controlled paths.
+- The Dockerfile `test` stage is the canonical backend quality gate.
+- Do not run one-off `govulncheck@latest` commands when updating dependencies;
+  update the Dockerfile pin intentionally and run `docker build --target test .`.
+
+For npm dependencies:
+
+- Use lockfile-based installs, including `npm ci` in CI and containers.
+- Keep `package-lock.json` committed when npm dependencies change.
+
+For automated updates:
+
+- Prefer Dependabot or an equivalent reviewed PR workflow over dynamic runtime
+  dependency resolution.
+- Dependency update PRs must pass `docker build --target test .`, Docker image
+  build, and E2E tests when relevant.
 
 ## Local Testing
 

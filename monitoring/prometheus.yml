@@ -4,3 +4,4 @@ scrape_configs:
     static_configs:
       - targets: ['tagnote:3000']
     metrics_path: /metrics
+    bearer_token_file: /etc/prometheus/operational_token

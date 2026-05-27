@@ -31,7 +31,14 @@ echo "  $HEALTHZ"
 
 # Status endpoint
 info "App metrics..."
-STATUS=$(ssh "$DEPLOY_HOST" "curl -sf ${URL_BASE}/status 2>/dev/null || echo 'unreachable'")
+STATUS=$(ssh "$DEPLOY_HOST" "
+    OPERATIONAL_TOKEN=\$(grep -s '^OPERATIONAL_BEARER_TOKEN=' ${TARGET_DIR}/.env | cut -d= -f2- || true)
+    if [ -n \"\$OPERATIONAL_TOKEN\" ]; then
+        curl -sf -H \"Authorization: Bearer \$OPERATIONAL_TOKEN\" ${URL_BASE}/status 2>/dev/null || echo 'unreachable'
+    else
+        echo 'unreachable'
+    fi
+")
 echo "  $STATUS"
 
 echo ""

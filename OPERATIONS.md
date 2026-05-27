@@ -141,15 +141,15 @@ curl http://localhost:3000/metrics
 
 | Endpoint | Purpose |
 | --- | --- |
-| `/healthz` | Liveness, version, uptime, DB connectivity. |
+| `/healthz` | Minimal public liveness status. |
 | `/status` | App counts and database size. Keep private. |
 | `/metrics` | Prometheus-compatible metrics. Keep private. |
 
-`/status` and `/metrics` are protected. Access is allowed for private-network
-callers without `X-Forwarded-For`, authenticated admin users using
-`Authorization: Bearer <jwt>`, or callers using
+`/status` and `/metrics` are protected. Access requires authenticated admin
+users using `Authorization: Bearer <jwt>` or callers using
 `Authorization: Bearer <OPERATIONAL_BEARER_TOKEN>` when that environment
-variable is set.
+variable is set. Private-network monitoring jobs must send the operational
+bearer token.
 
 ### Grafana And VictoriaMetrics
 
@@ -160,6 +160,11 @@ Local development:
 ```bash
 docker compose up -d
 ```
+
+The local compose stack defaults `OPERATIONAL_BEARER_TOKEN` to
+`dev-operational-token` so VictoriaMetrics can scrape `/metrics`.
+If you override that token locally, update `monitoring/operational_token` to
+the same value.
 
 Open `http://localhost:3778/grafana/`.
 

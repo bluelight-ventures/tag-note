@@ -59,7 +59,14 @@ else
 fi
 
 echo -n "TagNote /metrics: "
-METRICS_STATUS=$(ssh "$DEPLOY_HOST" "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/metrics 2>/dev/null || echo 'failed'")
+METRICS_STATUS=$(ssh "$DEPLOY_HOST" "
+    OPERATIONAL_TOKEN=\$(grep -s '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env | cut -d= -f2- || true)
+    if [ -n \"\$OPERATIONAL_TOKEN\" ]; then
+        curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$OPERATIONAL_TOKEN\" http://localhost:3000/metrics 2>/dev/null || echo 'failed'
+    else
+        echo 'missing-token'
+    fi
+")
 if [ "$METRICS_STATUS" = "200" ]; then
     ok "Healthy (HTTP 200)"
 else
@@ -86,5 +93,5 @@ ssh "$DEPLOY_HOST" "
 # Summary
 header "URLs"
 echo "  Grafana:     https://${TAGNOTE_DOMAIN}/grafana/"
-echo "  Metrics:     private Docker network only"
+echo "  Metrics:     private Docker network with OPERATIONAL_BEARER_TOKEN"
 echo "  VM (direct): http://<server>:8428"

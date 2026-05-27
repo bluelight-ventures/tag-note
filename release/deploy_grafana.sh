@@ -70,6 +70,34 @@ ok "dashboards/tagnote.json"
 
 # Step 2: Get Grafana password from .env
 GRAFANA_PASSWORD=$(ssh "$DEPLOY_HOST" "grep -s '^GRAFANA_ADMIN_PASSWORD=' ${PROD_DIR}/.env | cut -d= -f2 || echo 'admin'")
+OPERATIONAL_TOKEN=$(ssh "$DEPLOY_HOST" "grep -s '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env | cut -d= -f2- || echo ''")
+OPERATIONAL_TOKEN_CREATED=0
+if [ -z "$OPERATIONAL_TOKEN" ]; then
+    OPERATIONAL_TOKEN=$(openssl rand -hex 32)
+    OPERATIONAL_TOKEN_CREATED=1
+    ssh "$DEPLOY_HOST" "
+        if grep -q '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env 2>/dev/null; then
+            sed -i 's/^OPERATIONAL_BEARER_TOKEN=.*/OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_TOKEN}/' ${PROD_DIR}/.env
+        else
+            echo 'OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_TOKEN}' >> ${PROD_DIR}/.env
+        fi
+    "
+    ok "OPERATIONAL_BEARER_TOKEN saved to ${PROD_DIR}/.env"
+fi
+
+ssh "$DEPLOY_HOST" "
+    printf '%s\n' '${OPERATIONAL_TOKEN}' > ${MONITORING_DIR}/operational_token
+    chmod 600 ${MONITORING_DIR}/operational_token
+"
+ok "operational_token updated for VictoriaMetrics"
+
+if [ "$OPERATIONAL_TOKEN_CREATED" = "1" ]; then
+    ssh "$DEPLOY_HOST" "
+        cd ${PROD_DIR}
+        docker compose up -d tagnote
+    "
+    ok "TagNote restarted with OPERATIONAL_BEARER_TOKEN"
+fi
 
 # Step 3: Restart monitoring stack
 header "Restarting monitoring stack"

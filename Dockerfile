@@ -9,11 +9,19 @@ RUN go mod download
 
 COPY . .
 
+FROM golang:1.26-alpine AS test-tools
+
+ARG GOVULNCHECK_VERSION=v1.3.0
+RUN go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}
+
 FROM base AS test
+
+COPY --from=test-tools /go/bin/govulncheck /usr/local/bin/govulncheck
 
 RUN test -z "$(gofmt -l cmd internal)"
 RUN go vet ./...
 RUN go test ./...
+RUN govulncheck ./...
 
 FROM base AS builder
 

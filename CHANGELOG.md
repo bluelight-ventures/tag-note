@@ -21,11 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generated public SEO metadata from deployment URL settings.
 - Removed the stale `tagflow-server` command.
 - Clarified uploaded image attachment privacy as link-private.
+- Reduced public `/healthz` output to minimal liveness status.
+- Added pinned `govulncheck` coverage to the Dockerfile `test` stage.
 
 ### Fixed
 
-- Blocked public Caddy access to `/status` and `/metrics` while preserving
-  private Docker-network monitoring access.
+- Upgraded Fiber and golang-jwt to patched versions for reachable security
+  vulnerabilities.
+- Required explicit admin JWT or `OPERATIONAL_BEARER_TOKEN` access for
+  `/status` and `/metrics`, including private-network callers.
+- Rejected Google OAuth logins when Google reports an unverified email address.
+- Added a timeout to Google token verification requests.
 - Prevented magic-link account creation when email delivery is not configured.
 
 ---

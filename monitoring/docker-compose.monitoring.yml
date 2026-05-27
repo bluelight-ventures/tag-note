@@ -5,6 +5,7 @@ services:
     volumes:
       - vm-data:/victoria-metrics-data
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./operational_token:/etc/prometheus/operational_token:ro
     command:
       - "-promscrape.config=/etc/prometheus/prometheus.yml"
       - "-retentionPeriod=90d"

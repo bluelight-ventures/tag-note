@@ -27,12 +27,17 @@ echo -e "${NC}"
 # Collect all data in a single SSH session for efficiency
 DASHBOARD_DATA=$(ssh "$DEPLOY_HOST" bash -s << 'REMOTE_SCRIPT'
     set -e
+    OPERATIONAL_TOKEN=$(grep -s '^OPERATIONAL_BEARER_TOKEN=' /opt/tagnote/.env | cut -d= -f2- || true)
+    AUTH_HEADER=()
+    if [ -n "$OPERATIONAL_TOKEN" ]; then
+        AUTH_HEADER=(-H "Authorization: Bearer ${OPERATIONAL_TOKEN}")
+    fi
 
     echo "===HEALTHZ==="
     curl -sf http://localhost:3000/healthz 2>/dev/null || echo '{"status":"unreachable"}'
 
     echo "===STATUS==="
-    curl -sf http://localhost:3000/status 2>/dev/null || echo '{}'
+    curl -sf "${AUTH_HEADER[@]}" http://localhost:3000/status 2>/dev/null || echo '{}'
 
     echo "===CONTAINERS==="
     cd /opt/tagnote && docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "N/A"

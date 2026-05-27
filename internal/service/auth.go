@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -315,14 +316,16 @@ func (a *AuthService) GoogleLogin(ctx context.Context, req model.GoogleAuthReque
 }
 
 type googleTokenInfo struct {
-	Sub   string `json:"sub"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Aud   string `json:"aud"`
+	Sub           string      `json:"sub"`
+	Email         string      `json:"email"`
+	Name          string      `json:"name"`
+	Aud           string      `json:"aud"`
+	EmailVerified interface{} `json:"email_verified"`
 }
 
 func (a *AuthService) verifyGoogleToken(idToken string) (*googleTokenInfo, error) {
-	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + url.QueryEscape(idToken))
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +345,26 @@ func (a *AuthService) verifyGoogleToken(idToken string) (*googleTokenInfo, error
 		return nil, fmt.Errorf("token audience mismatch")
 	}
 
+	if info.Sub == "" || info.Email == "" {
+		return nil, fmt.Errorf("token missing account identity")
+	}
+
+	if !info.isEmailVerified() {
+		return nil, fmt.Errorf("Google email is not verified")
+	}
+
 	return &info, nil
+}
+
+func (i googleTokenInfo) isEmailVerified() bool {
+	switch value := i.EmailVerified.(type) {
+	case bool:
+		return value
+	case string:
+		return strings.EqualFold(value, "true")
+	default:
+		return false
+	}
 }
 
 // ForgotPassword initiates a password reset.

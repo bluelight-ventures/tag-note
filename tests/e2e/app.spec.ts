@@ -44,6 +44,13 @@ test('landing page and app shell load', async ({ page }) => {
   await expect(page.getByTestId('guest-mode-button')).toBeVisible();
 });
 
+test('public health endpoint exposes only minimal liveness', async ({ request }) => {
+  const response = await request.get('/healthz');
+  expect(response.status()).toBe(200);
+  await expect(response).toBeOK();
+  expect(await response.json()).toEqual({ status: 'ok' });
+});
+
 test('test user can create, filter, and delete notes', async ({ page }) => {
   const suffix = Date.now().toString(36);
   const primaryContent = `E2E primary note ${suffix}`;
@@ -77,8 +84,11 @@ test('guest mode can create a local note', async ({ page }) => {
   await expect(page.getByTestId('note-card').filter({ hasText: content })).toBeVisible();
 });
 
-test('operational endpoints are protected for public proxy traffic', async ({ request }) => {
+test('operational endpoints require explicit credentials', async ({ request }) => {
   for (const path of ['/status', '/metrics']) {
+    const directResponse = await request.get(path);
+    expect(directResponse.status(), `${path} should reject unauthenticated direct traffic`).toBe(401);
+
     const publicResponse = await request.get(path, {
       headers: { 'X-Forwarded-For': '203.0.113.10' },
     });

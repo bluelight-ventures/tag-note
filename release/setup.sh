@@ -76,6 +76,7 @@ ok "backup.sh"
 # Step 3: Generate .env
 header "Generating .env"
 JWT_SECRET=$(openssl rand -hex 32)
+OPERATIONAL_BEARER_TOKEN=$(openssl rand -hex 32)
 
 ssh "$DEPLOY_HOST" "
     cat > ${PROD_DIR}/.env << 'ENVEOF'
@@ -88,11 +89,11 @@ ADMIN_EMAIL=
 GRAFANA_ADMIN_PASSWORD=
 # GOOGLE_CLIENT_ID=
 # TAGNOTE_ALERT_WEBHOOK=
-# OPERATIONAL_BEARER_TOKEN=
+OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_BEARER_TOKEN}
 ENVEOF
     chmod 600 ${PROD_DIR}/.env
 "
-ok ".env created with generated JWT_SECRET"
+ok ".env created with generated JWT_SECRET and OPERATIONAL_BEARER_TOKEN"
 
 # Step 4: Start Caddy only (tagnote needs an image first — run deploy.sh)
 header "Starting Caddy"

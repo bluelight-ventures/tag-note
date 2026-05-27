@@ -71,7 +71,7 @@ Copy `.env.example` to `.env` and set values as needed.
 | `TAGNOTE_DOMAIN` | Production | `notes.example.com` | Your production domain for Compose/Caddy examples. |
 | `BASE_URL` | Recommended | `http://localhost:3000` | Public app URL used in generated links. |
 | `ADMIN_EMAIL` | No | empty | Email address that can access `/admin`. |
-| `OPERATIONAL_BEARER_TOKEN` | No | empty | Optional static bearer token for `/status` and `/metrics`. |
+| `OPERATIONAL_BEARER_TOKEN` | No | empty | Static bearer token for non-admin `/status` and `/metrics` access. |
 | `GOOGLE_CLIENT_ID` | No | empty | Enables "Sign in with Google" when set. |
 | `GRAFANA_ADMIN_PASSWORD` | No | `admin` | Local/monitoring Grafana admin password. |
 
@@ -155,7 +155,7 @@ API routes are served under `/api/v1`. All routes except authentication require
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/healthz` | Liveness, version, uptime, and DB status. |
+| `GET` | `/healthz` | Minimal public liveness status. |
 | `GET` | `/status` | Basic app and database statistics. |
 | `GET` | `/metrics` | Prometheus-compatible metrics. |
 | `GET` | `/admin` | Admin dashboard UI. |
@@ -163,8 +163,8 @@ API routes are served under `/api/v1`. All routes except authentication require
 | `GET` | `/api/v1/admin/users` | Admin user list. |
 | `GET` | `/api/v1/admin/logs` | Admin audit logs. |
 
-`/status` and `/metrics` are available to private-network callers, admin users
-with a normal JWT bearer token, or callers with `OPERATIONAL_BEARER_TOKEN`.
+`/status` and `/metrics` require either an admin JWT bearer token or
+`OPERATIONAL_BEARER_TOKEN`.
 
 ## Attachment Privacy
 

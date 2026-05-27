@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -52,15 +51,10 @@ func AdminOnly(cfg AdminConfig, auth *service.AuthService) fiber.Handler {
 }
 
 // OperationalAccess allows operational endpoints to be reached by:
-// - internal Docker-network callers without X-Forwarded-For,
 // - callers with OPERATIONAL_BEARER_TOKEN,
 // - authenticated admin users.
 func OperationalAccess(cfg AdminConfig, auth *service.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if c.Get("X-Forwarded-For") == "" && isPrivateIP(c.IP()) {
-			return c.Next()
-		}
-
 		header := c.Get("Authorization")
 		if token := os.Getenv("OPERATIONAL_BEARER_TOKEN"); token != "" && hasBearerToken(header, token) {
 			return c.Next()
@@ -109,18 +103,6 @@ func hasBearerToken(header, expected string) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(parts[1]), []byte(expected)) == 1
-}
-
-func isPrivateIP(addr string) bool {
-	host, _, err := net.SplitHostPort(addr)
-	if err == nil {
-		addr = host
-	}
-	ip := net.ParseIP(addr)
-	if ip == nil {
-		return false
-	}
-	return ip.IsLoopback() || ip.IsPrivate()
 }
 
 // AuditLog is a Fiber middleware that logs admin actions to the audit_logs table.

@@ -45,6 +45,9 @@ Run backend tests through Docker:
 docker build --target test .
 ```
 
+This Docker target runs formatting checks, `go vet`, Go tests, and
+`govulncheck` with the pinned tool version from the Dockerfile.
+
 Run browser tests through Docker as described in [TESTING.md](TESTING.md).
 
 Do not rely on a host-specific local environment for pull request validation.

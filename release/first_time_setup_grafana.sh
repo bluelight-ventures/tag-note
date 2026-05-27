@@ -100,6 +100,8 @@ ok "tagnote-network ready"
 # Step 4: Generate Grafana password and save to .env
 header "Generating Grafana admin password"
 GRAFANA_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')
+OPERATIONAL_TOKEN=$(openssl rand -hex 32)
+OPERATIONAL_TOKEN_CREATED=0
 
 # Check if GRAFANA_ADMIN_PASSWORD already in .env
 EXISTING_PASSWORD=$(ssh "$DEPLOY_HOST" "grep -s '^GRAFANA_ADMIN_PASSWORD=' ${PROD_DIR}/.env | cut -d= -f2 || echo ''")
@@ -116,6 +118,36 @@ else
         fi
     "
     ok "GRAFANA_ADMIN_PASSWORD saved to ${PROD_DIR}/.env"
+fi
+
+EXISTING_OPERATIONAL_TOKEN=$(ssh "$DEPLOY_HOST" "grep -s '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env | cut -d= -f2- || echo ''")
+if [ -n "$EXISTING_OPERATIONAL_TOKEN" ]; then
+    info "Using existing OPERATIONAL_BEARER_TOKEN from .env"
+    OPERATIONAL_TOKEN="$EXISTING_OPERATIONAL_TOKEN"
+else
+    OPERATIONAL_TOKEN_CREATED=1
+    ssh "$DEPLOY_HOST" "
+        if grep -q '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env 2>/dev/null; then
+            sed -i 's/^OPERATIONAL_BEARER_TOKEN=.*/OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_TOKEN}/' ${PROD_DIR}/.env
+        else
+            echo 'OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_TOKEN}' >> ${PROD_DIR}/.env
+        fi
+    "
+    ok "OPERATIONAL_BEARER_TOKEN saved to ${PROD_DIR}/.env"
+fi
+
+ssh "$DEPLOY_HOST" "
+    printf '%s\n' '${OPERATIONAL_TOKEN}' > ${MONITORING_DIR}/operational_token
+    chmod 600 ${MONITORING_DIR}/operational_token
+"
+ok "operational_token created for VictoriaMetrics"
+
+if [ "$OPERATIONAL_TOKEN_CREATED" = "1" ]; then
+    ssh "$DEPLOY_HOST" "
+        cd ${PROD_DIR}
+        docker compose up -d tagnote
+    "
+    ok "TagNote restarted with OPERATIONAL_BEARER_TOKEN"
 fi
 
 # Step 5: Start monitoring stack

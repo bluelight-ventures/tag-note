@@ -85,7 +85,7 @@ func main() {
 
 	operationalAccess := admin.OperationalAccess(adminCfg, authSvc)
 
-	// Metrics endpoint (private network, operational bearer token, or admin JWT)
+	// Metrics endpoint (operational bearer token or admin JWT)
 	app.Get("/metrics", operationalAccess, admin.ExposeMetrics)
 
 	app.Get("/healthz", func(c *fiber.Ctx) error {
@@ -100,13 +100,7 @@ func main() {
 		}
 
 		return c.JSON(fiber.Map{
-			"status":     status,
-			"version":    Version,
-			"build_time": BuildTime,
-			"git_commit": GitCommit,
-			"uptime":     time.Since(startTime).Truncate(time.Second).String(),
-			"uptime_sec": int(time.Since(startTime).Seconds()),
-			"db":         dbOK,
+			"status": status,
 		})
 	})
 
