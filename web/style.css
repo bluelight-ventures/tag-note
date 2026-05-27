@@ -1518,6 +1518,14 @@ body {
 
 .read-body {
     overflow-y: auto;
+    padding: 18px 22px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .read-body {
+        padding: 14px 16px;
+    }
 }
 
 /* ===== Autocomplete ===== */
