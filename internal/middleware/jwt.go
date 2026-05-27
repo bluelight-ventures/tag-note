@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"tagnote/internal/service"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 // JWTAuth returns a Fiber middleware that validates JWT tokens.

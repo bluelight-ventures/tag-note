@@ -8,9 +8,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"tagnote/internal/model"
-	"tagnote/internal/repo"
-	"tagnote/internal/service"
+	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/repo"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 // AdminHandler handles admin API endpoints.

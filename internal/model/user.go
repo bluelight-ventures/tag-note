@@ -28,9 +28,9 @@ type LoginRequest struct {
 
 // AuthResponse is returned after login or registration.
 type AuthResponse struct {
-	Token             string `json:"token,omitempty"`
-	User              User   `json:"user"`
-	PendingVerify     bool   `json:"pending_verify,omitempty"`
+	Token              string `json:"token,omitempty"`
+	User               User   `json:"user"`
+	PendingVerify      bool   `json:"pending_verify,omitempty"`
 	PendingVerifyEmail string `json:"pending_verify_email,omitempty"`
 }
 

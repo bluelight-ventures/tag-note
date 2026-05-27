@@ -2466,11 +2466,69 @@ function simpleMarkdown(text) {
         .replace(/^/, '<p>').replace(/$/, '</p>');
 }
 
-function renderMarkdown(text) {
-    if (focusEditor && typeof focusEditor.markdown === 'function') {
-        return focusEditor.markdown(text);
+function isSafeURL(rawURL, image) {
+    if (!rawURL) return false;
+    const trimmed = rawURL.trim();
+    if (trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('#')) {
+        return true;
     }
-    return simpleMarkdown(text);
+
+    try {
+        const url = new URL(trimmed, window.location.origin);
+        if (url.protocol === 'http:' || url.protocol === 'https:') return true;
+        if (!image && url.protocol === 'mailto:') return true;
+        return image && url.protocol === 'data:' && /^data:image\/(png|jpeg|gif|webp);base64,/i.test(trimmed);
+    } catch (_) {
+        return false;
+    }
+}
+
+function sanitizeRenderedMarkdown(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+
+    template.content.querySelectorAll('script, style, iframe, object, embed, link, meta, form').forEach(el => el.remove());
+
+    template.content.querySelectorAll('*').forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            const name = attr.name.toLowerCase();
+            if (name.startsWith('on') || name === 'style' || name === 'srcdoc') {
+                el.removeAttribute(attr.name);
+            }
+        });
+
+        if (el.tagName === 'A') {
+            const href = el.getAttribute('href');
+            if (!isSafeURL(href, false)) {
+                el.removeAttribute('href');
+            }
+            if (el.getAttribute('target') === '_blank') {
+                el.setAttribute('rel', 'noopener noreferrer');
+            }
+        }
+
+        if (el.tagName === 'IMG') {
+            const src = el.getAttribute('src');
+            if (!isSafeURL(src, true)) {
+                el.remove();
+                return;
+            }
+            el.setAttribute('loading', 'lazy');
+            el.setAttribute('decoding', 'async');
+        }
+    });
+
+    return template.innerHTML;
+}
+
+function renderMarkdown(text) {
+    let html;
+    if (focusEditor && typeof focusEditor.markdown === 'function') {
+        html = focusEditor.markdown(text);
+    } else {
+        html = simpleMarkdown(text);
+    }
+    return sanitizeRenderedMarkdown(html);
 }
 
 function highlightText(html, query) {

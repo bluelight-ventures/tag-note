@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"tagnote/internal/model"
+	"github.com/runminglu/tag-note/internal/model"
 )
 
 // ErrNotFound is returned when a requested entity does not exist.

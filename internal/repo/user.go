@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"tagnote/internal/model"
+	"github.com/runminglu/tag-note/internal/model"
 )
 
 // ErrEmailExists is returned when a registration email is already taken.

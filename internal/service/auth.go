@@ -17,8 +17,8 @@ import (
 	"github.com/oklog/ulid/v2"
 	"golang.org/x/crypto/bcrypt"
 
-	"tagnote/internal/model"
-	"tagnote/internal/repo"
+	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/repo"
 )
 
 // Errors for auth operations.
@@ -37,17 +37,21 @@ type AuthService struct {
 }
 
 // NewAuth creates a new AuthService.
-func NewAuth(r repo.Repository, emailService *EmailService) *AuthService {
+func NewAuth(r repo.Repository, emailService *EmailService) (*AuthService, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "tagnote-dev-secret"
+		if os.Getenv("TAGNOTE_TEST_MODE") == "1" || os.Getenv("TAGNOTE_ALLOW_DEV_SECRET") == "1" {
+			secret = "tagnote-dev-secret"
+		} else {
+			return nil, fmt.Errorf("JWT_SECRET is required; set TAGNOTE_ALLOW_DEV_SECRET=1 only for local development")
+		}
 	}
 	return &AuthService{
 		repo:           r,
 		jwtSecret:      []byte(secret),
 		emailService:   emailService,
 		googleClientID: os.Getenv("GOOGLE_CLIENT_ID"),
-	}
+	}, nil
 }
 
 // generateSecureToken generates a cryptographically secure random token.
@@ -233,6 +237,10 @@ func (a *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model
 
 // GoogleLogin handles Google OAuth authentication.
 func (a *AuthService) GoogleLogin(ctx context.Context, req model.GoogleAuthRequest) (*model.AuthResponse, error) {
+	if a.googleClientID == "" {
+		return nil, fmt.Errorf("Google login is not configured")
+	}
+
 	// Verify the Google ID token
 	googleUser, err := a.verifyGoogleToken(req.IDToken)
 	if err != nil {

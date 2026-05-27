@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"tagnote/internal/model"
+	"github.com/runminglu/tag-note/internal/model"
 
 	_ "modernc.org/sqlite"
 )

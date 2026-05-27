@@ -10,8 +10,8 @@ import (
 
 	"github.com/oklog/ulid/v2"
 
-	"tagnote/internal/model"
-	"tagnote/internal/repo"
+	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/repo"
 )
 
 // Service contains business logic for sub-notes.

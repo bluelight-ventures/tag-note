@@ -5,8 +5,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"tagnote/internal/model"
-	"tagnote/internal/service"
+	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 // AuthHandler holds auth-related HTTP route handlers.

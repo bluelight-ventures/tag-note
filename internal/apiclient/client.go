@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"tagnote/internal/model"
+	"github.com/runminglu/tag-note/internal/model"
 )
 
 const defaultBaseURL = "http://localhost:3000"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"tagnote/internal/apiclient"
+	"github.com/runminglu/tag-note/internal/apiclient"
 )
 
 func main() {

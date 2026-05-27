@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"tagnote/internal/model"
+	"github.com/runminglu/tag-note/internal/model"
 )
 
 // CreateAuditLog inserts a new audit log entry.

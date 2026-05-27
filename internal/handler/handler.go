@@ -9,10 +9,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
-	"tagnote/internal/middleware"
-	"tagnote/internal/model"
-	"tagnote/internal/repo"
-	"tagnote/internal/service"
+	"github.com/runminglu/tag-note/internal/middleware"
+	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/repo"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 // Handler holds HTTP route handlers.

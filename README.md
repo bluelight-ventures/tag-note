@@ -1,5 +1,7 @@
 # TagNote
 
+[![CI](https://github.com/runminglu/tag-note/actions/workflows/ci.yml/badge.svg)](https://github.com/runminglu/tag-note/actions/workflows/ci.yml)
+
 A fast note-taking system that organizes your thinking with tags instead of folders.
 
 ## What is TagNote?
@@ -341,8 +343,9 @@ docker compose up --build
 
 | Variable           | Default              | Description                              |
 |--------------------|----------------------|------------------------------------------|
-| `JWT_SECRET`       | `tagnote-dev-secret` | HMAC key for signing JWTs. **Change in production.** |
+| `JWT_SECRET`       | (required)           | HMAC key for signing JWTs. Required unless `TAGNOTE_ALLOW_DEV_SECRET=1`. |
 | `TAGNOTE_TEST_MODE`| `0`                  | Set to `1` to auto-create a test account |
+| `TAGNOTE_ALLOW_DEV_SECRET` | `0`          | Set to `1` only for local development without `JWT_SECRET` |
 | `TAGNOTE_URL`      | `http://localhost:3000` | Server URL for CLI tools              |
 | `TAGNOTE_TOKEN`    | (none)               | JWT token for CLI authentication         |
 | `TAGNOTE_DOMAIN`   | (none)               | Domain name (production deployment)      |

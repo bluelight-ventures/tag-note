@@ -93,12 +93,12 @@ type ImportResultResponse struct {
 
 // FullExport is the comprehensive export format containing all user data.
 type FullExport struct {
-	Version  int        `json:"version"`
-	Exported time.Time  `json:"exported_at"`
-	Notes    []SubNote  `json:"notes"`
-	Trash    []SubNote  `json:"trash"`
-	Tags     []TagInfo  `json:"tags"`
-	Settings Settings   `json:"settings"`
+	Version  int       `json:"version"`
+	Exported time.Time `json:"exported_at"`
+	Notes    []SubNote `json:"notes"`
+	Trash    []SubNote `json:"trash"`
+	Tags     []TagInfo `json:"tags"`
+	Settings Settings  `json:"settings"`
 }
 
 // Settings holds user preferences that are persisted server-side.
@@ -133,8 +133,8 @@ type FullImportPreview struct {
 
 // FullImportResult is returned when dry_run is false for a full import.
 type FullImportResult struct {
-	ImportedNotes int  `json:"imported_notes"`
-	ImportedTrash int  `json:"imported_trash"`
-	ImportedTags  int  `json:"imported_tags"`
+	ImportedNotes   int  `json:"imported_notes"`
+	ImportedTrash   int  `json:"imported_trash"`
+	ImportedTags    int  `json:"imported_tags"`
 	SettingsApplied bool `json:"settings_applied"`
 }

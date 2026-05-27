@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"tagnote/internal/apiclient"
+	"github.com/runminglu/tag-note/internal/apiclient"
 )
 
 type tagList []string

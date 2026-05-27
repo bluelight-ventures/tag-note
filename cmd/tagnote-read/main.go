@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"tagnote/internal/apiclient"
+	"github.com/runminglu/tag-note/internal/apiclient"
 )
 
 type tagList []string

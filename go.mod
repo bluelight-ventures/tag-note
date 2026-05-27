@@ -1,4 +1,4 @@
-module tagnote
+module github.com/runminglu/tag-note
 
 go 1.22
 

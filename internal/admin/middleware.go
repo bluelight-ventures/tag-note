@@ -9,8 +9,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/oklog/ulid/v2"
 
-	"tagnote/internal/repo"
-	"tagnote/internal/service"
+	"github.com/runminglu/tag-note/internal/repo"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 // AdminOnly is a Fiber middleware that restricts access to admin users.

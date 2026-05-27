@@ -14,10 +14,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 
-	"tagnote/internal/handler"
-	"tagnote/internal/repo"
-	"tagnote/internal/service"
-	"tagnote/web"
+	"github.com/runminglu/tag-note/internal/handler"
+	"github.com/runminglu/tag-note/internal/repo"
+	"github.com/runminglu/tag-note/internal/service"
+	"github.com/runminglu/tag-note/web"
 )
 
 func main() {
@@ -37,7 +37,10 @@ func main() {
 
 	emailSvc := service.NewEmailService()
 	svc := service.New(r)
-	authSvc := service.NewAuth(r, emailSvc)
+	authSvc, err := service.NewAuth(r, emailSvc)
+	if err != nil {
+		log.Fatalf("init auth: %v", err)
+	}
 	h := handler.New(svc)
 	ah := handler.NewAuth(authSvc)
 	ih := handler.NewImage(*uploadDir)
