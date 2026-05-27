@@ -32,15 +32,19 @@ DASHBOARD_DATA=$(ssh "$DEPLOY_HOST" bash -s << 'REMOTE_SCRIPT'
     if [ -n "$OPERATIONAL_TOKEN" ]; then
         AUTH_HEADER=(-H "Authorization: Bearer ${OPERATIONAL_TOKEN}")
     fi
+    cd /opt/tagnote
+    APP_CONTAINER=$(docker compose ps -q tagnote 2>/dev/null || true)
+    APP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{println .IPAddress}}{{end}}' "$APP_CONTAINER" 2>/dev/null | head -n1)
+    APP_BASE="http://${APP_IP}:3000"
 
     echo "===HEALTHZ==="
-    curl -sf http://localhost:3000/healthz 2>/dev/null || echo '{"status":"unreachable"}'
+    curl -sf "${APP_BASE}/healthz" 2>/dev/null || echo '{"status":"unreachable"}'
 
     echo "===STATUS==="
-    curl -sf "${AUTH_HEADER[@]}" http://localhost:3000/status 2>/dev/null || echo '{}'
+    curl -sf "${AUTH_HEADER[@]}" "${APP_BASE}/status" 2>/dev/null || echo '{}'
 
     echo "===CONTAINERS==="
-    cd /opt/tagnote && docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "N/A"
+    docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "N/A"
 
     echo "===DOCKER_STATS==="
     docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}" 2>/dev/null | grep -E "tagnote|caddy" || echo "N/A"

@@ -60,9 +60,12 @@ fi
 
 echo -n "TagNote /metrics: "
 METRICS_STATUS=$(ssh "$DEPLOY_HOST" "
+    cd ${PROD_DIR}
     OPERATIONAL_TOKEN=\$(grep -s '^OPERATIONAL_BEARER_TOKEN=' ${PROD_DIR}/.env | cut -d= -f2- || true)
-    if [ -n \"\$OPERATIONAL_TOKEN\" ]; then
-        curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$OPERATIONAL_TOKEN\" http://localhost:3000/metrics 2>/dev/null || echo 'failed'
+    APP_CONTAINER=\$(docker compose ps -q tagnote 2>/dev/null || true)
+    APP_IP=\$(docker inspect -f '{{range .NetworkSettings.Networks}}{{println .IPAddress}}{{end}}' \"\$APP_CONTAINER\" 2>/dev/null | head -n1)
+    if [ -n \"\$OPERATIONAL_TOKEN\" ] && [ -n \"\$APP_IP\" ]; then
+        curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$OPERATIONAL_TOKEN\" \"http://\$APP_IP:3000/metrics\" 2>/dev/null || echo 'failed'
     else
         echo 'missing-token'
     fi

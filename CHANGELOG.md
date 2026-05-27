@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Updated release and status scripts to verify production containers through
+  Docker networking when the app port is not published on the host.
+
 ---
 
 ## [1.4.0] - 2026-05-27
