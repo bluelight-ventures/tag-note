@@ -9,6 +9,7 @@ build:
 
 run:
 	docker compose up --build -d
+	./scripts/dev-links.sh
 
 stop:
 	docker compose down

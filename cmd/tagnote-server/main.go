@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -263,10 +264,16 @@ func main() {
 		Root: http.FS(webRoot),
 	}))
 
+	listener, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Fatalf("listen on %s: %v", *addr, err)
+	}
+
+	printStartupLinks(*addr)
+
 	// Start server in a goroutine
 	go func() {
-		fmt.Printf("TagNote %s server listening on %s\n", Version, *addr)
-		if err := app.Listen(*addr); err != nil {
+		if err := app.Listener(listener); err != nil {
 			log.Printf("server error: %v", err)
 		}
 	}()
@@ -297,4 +304,55 @@ func publicBaseURL() string {
 		return "https://" + strings.TrimRight(domain, "/")
 	}
 	return "http://localhost:3000"
+}
+
+func printStartupLinks(addr string) {
+	baseURL := devURL("TAGNOTE_DEV_BASE_URL", addr)
+	proxyURL := strings.TrimRight(os.Getenv("TAGNOTE_DEV_PROXY_URL"), "/")
+	grafanaURL := strings.TrimSpace(os.Getenv("TAGNOTE_GRAFANA_URL"))
+	operationalToken := strings.TrimSpace(os.Getenv("OPERATIONAL_BEARER_TOKEN"))
+
+	if grafanaURL == "" && proxyURL != "" {
+		grafanaURL = proxyURL + "/grafana/"
+	}
+	if operationalToken == "" {
+		operationalToken = "(set OPERATIONAL_BEARER_TOKEN)"
+	}
+
+	fmt.Printf("TagNote %s server ready on %s\n", Version, addr)
+	fmt.Println()
+	fmt.Println("Useful links")
+	fmt.Printf("  Landing: %s/\n", baseURL)
+	fmt.Printf("  App:     %s/app\n", baseURL)
+	fmt.Printf("  Admin:   %s/admin\n", baseURL)
+	fmt.Printf("  Health:  %s/healthz\n", baseURL)
+	fmt.Printf("  Status:  %s/status\n", baseURL)
+	fmt.Printf("  Metrics: %s/metrics\n", baseURL)
+	if proxyURL != "" {
+		fmt.Printf("  Proxy:   %s/\n", proxyURL)
+	}
+	if grafanaURL != "" {
+		fmt.Printf("  Grafana: %s\n", grafanaURL)
+	}
+	fmt.Println()
+	fmt.Printf("Operational endpoints require: Authorization: Bearer %s\n", operationalToken)
+	fmt.Println()
+}
+
+func devURL(envKey, addr string) string {
+	if value := strings.TrimRight(os.Getenv(envKey), "/"); value != "" {
+		return value
+	}
+	if baseURL := strings.TrimRight(os.Getenv("BASE_URL"), "/"); baseURL != "" {
+		return baseURL
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return publicBaseURL()
+	}
+	if host == "" || host == "::" || host == "0.0.0.0" {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, port)
 }

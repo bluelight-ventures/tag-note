@@ -13,6 +13,9 @@ services:
       - TAGNOTE_TEST_MODE=${TAGNOTE_TEST_MODE:-0}
       - TAGNOTE_ALLOW_DEV_SECRET=${TAGNOTE_ALLOW_DEV_SECRET:-1}
       - OPERATIONAL_BEARER_TOKEN=${OPERATIONAL_BEARER_TOKEN:-dev-operational-token}
+      - TAGNOTE_DEV_BASE_URL=${TAGNOTE_DEV_BASE_URL:-http://localhost:3777}
+      - TAGNOTE_DEV_PROXY_URL=${TAGNOTE_DEV_PROXY_URL:-http://localhost:3778}
+      - TAGNOTE_GRAFANA_URL=${TAGNOTE_GRAFANA_URL:-http://localhost:3778/grafana/}
     restart: unless-stopped
     networks:
       - tagnote-dev
