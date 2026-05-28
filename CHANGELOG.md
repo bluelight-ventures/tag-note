@@ -9,8 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.4.1] - 2026-05-28
+
+### Added
+
+- Added autosave while creating and editing notes, including guest-mode support,
+  saved/unsaved status feedback, and dirty-close behavior that understands
+  autosaved changes.
+- Added README product screenshot and the hosted app link.
+- Added complete local development links for app, admin, health, status,
+  metrics, proxy, and Grafana.
+- Added `make start`, `make up`, and `make down` aliases for local lifecycle
+  commands.
+- Added E2E testing documentation for local Docker runs and remote SSH runs on
+  staging or disposable hosts.
+
+### Changed
+
+- Removed the misleading editor cancel/clear button now that autosave can
+  persist drafts in the background.
+- Stabilized frontend E2E tests around the shared seeded account and EasyMDE
+  readiness.
+- Passed `ADMIN_EMAIL` through local Docker Compose for admin operational
+  endpoint testing.
+- Updated development startup output to print local TagNote links.
+- Updated dependencies including Fiber, JWT, AWS SESv2, x/crypto,
+  VictoriaMetrics metrics, and GitHub Actions.
+
 ### Fixed
 
+- Prevented editor autofocus from stealing tag input focus.
+- Improved read overlay content padding.
 - Updated release and status scripts to verify production containers through
   Docker networking when the app port is not published on the host.
 
@@ -202,7 +233,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/runminglu/tag-note/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/runminglu/tag-note/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/runminglu/tag-note/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/runminglu/tag-note/compare/v1.2.0...v1.3.0
