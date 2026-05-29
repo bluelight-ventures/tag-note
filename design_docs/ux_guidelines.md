@@ -29,7 +29,7 @@ When two rules conflict, see [§33 Tradeoffs](#33-tradeoffs).
 
 ## Foundations
 
-### 1. Principles
+### 1. Implementation Rules
 
 Short and load-bearing. Read these before reaching for any specific pattern.
 
@@ -789,6 +789,8 @@ explicitly:
 
 - `design_docs/autosave_notes.md` — autosave contract behind the
   save-status indicator.
+- `design_docs/ux_principles.md` — short decision-making brief for TagNote
+  design work.
 - `design_docs/ios_app_design.md` — companion iOS app direction.
 - `web/style.css` — canonical design tokens for the web client.
 - `web/index.html`, `web/landing.html` — web reference implementations of

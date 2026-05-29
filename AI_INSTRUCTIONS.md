@@ -194,6 +194,8 @@ future client — read:
 
 Other design notes in `design_docs/`:
 
+- `design_docs/ux_principles.md` — short decision-making brief for TagNote
+  design work.
 - `design_docs/autosave_notes.md` — autosave contract behind the
   save-status indicator.
 - `design_docs/ios_app_design.md` — companion iOS app direction.
