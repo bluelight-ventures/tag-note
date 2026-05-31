@@ -19,6 +19,7 @@ private struct WebStyleAppShell: View {
     @State private var selection: AppSection = .notes
     @State private var isSidebarOpen = false
     @State private var activeEditorSheet: AppEditorSheet?
+    @State private var readNote: SubNote?
     @State private var didAutoOpenEditor = false
 
     init(api: TagNoteAPI, cache: LocalCache) {
@@ -47,6 +48,22 @@ private struct WebStyleAppShell: View {
                 compactLayout
             }
         }
+        .overlay {
+            if let readNote {
+                ResizableNoteReadPanel(
+                    note: readNote,
+                    availableTags: notesViewModel.availableTags,
+                    onClose: {
+                        self.readNote = nil
+                    },
+                    onEdit: {
+                        self.readNote = nil
+                        activeEditorSheet = .edit(readNote)
+                    }
+                )
+                .environmentObject(appState)
+            }
+        }
         .task {
             await notesViewModel.loadCached()
             await notesViewModel.refresh()
@@ -65,6 +82,9 @@ private struct WebStyleAppShell: View {
             switch sheet {
             case .create:
                 EditorView(viewModel: EditorViewModel(note: nil, api: api))
+                    .environmentObject(appState)
+            case .edit(let note):
+                EditorView(viewModel: EditorViewModel(note: note, api: api))
                     .environmentObject(appState)
             }
         }
@@ -174,7 +194,9 @@ private struct WebStyleAppShell: View {
     private var content: some View {
         switch selection {
         case .notes:
-            NotesView(viewModel: notesViewModel)
+            NotesView(viewModel: notesViewModel) { note in
+                readNote = note
+            }
         case .tags:
             TagsView(viewModel: tagsViewModel)
         case .trash:
@@ -193,8 +215,16 @@ private struct WebStyleAppShell: View {
 
 private enum AppEditorSheet: Identifiable {
     case create
+    case edit(SubNote)
 
-    var id: String { "create" }
+    var id: String {
+        switch self {
+        case .create:
+            return "create"
+        case .edit(let note):
+            return "edit-\(note.routeID)"
+        }
+    }
 }
 
 private enum AppSection: String, CaseIterable, Identifiable {
@@ -597,45 +627,138 @@ private struct TagFilterChipField: View {
     @State private var draft = ""
 
     var body: some View {
-        FlowLayout(spacing: 6, rowSpacing: 6) {
-            ForEach(notesViewModel.selectedTags, id: \.self) { tag in
-                RemovableTagChip(
-                    label: tag,
-                    tagInfo: notesViewModel.availableTags.first { $0.name == tag }
-                ) {
-                    Task { await notesViewModel.toggleTagFilter(tag) }
-                }
-            }
-
-            TextField(notesViewModel.selectedTags.isEmpty ? "Filter by tags..." : "", text: $draft)
-                .font(.system(size: 15, weight: .medium))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .foregroundStyle(appState.palette.text)
-                .frame(minWidth: 90)
-                .onChange(of: draft) { _, value in
-                    if let last = value.last, last == " " || last == "," || last == "\n" {
-                        commitDraft()
+        VStack(alignment: .leading, spacing: 0) {
+            FlowLayout(spacing: 6, rowSpacing: 6) {
+                ForEach(notesViewModel.selectedTags, id: \.self) { tag in
+                    RemovableTagChip(
+                        label: tag,
+                        tagInfo: notesViewModel.availableTags.first { $0.name == tag }
+                    ) {
+                        Task { await notesViewModel.toggleTagFilter(tag) }
                     }
                 }
-                .onSubmit(commitDraft)
-                .accessibilityIdentifier("tag-filter-input")
+
+                TextField(notesViewModel.selectedTags.isEmpty ? "Filter by tags..." : "", text: $draft)
+                    .font(.system(size: 15, weight: .medium))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .foregroundStyle(appState.palette.text)
+                    .frame(minWidth: 90, minHeight: 34, alignment: .center)
+                    .onChange(of: draft) { _, value in
+                        if let last = value.last, last == " " || last == "," || last == "\n" {
+                            commitDraft()
+                        }
+                    }
+                    .onSubmit(commitDraft)
+                    .accessibilityIdentifier("tag-filter-input")
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(appState.palette.background)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(fieldBorderColor, lineWidth: 1))
+            .accessibilityIdentifier("tag-filter-summary")
+
+            if !suggestions.isEmpty {
+                TagFilterSuggestionsList(suggestions: suggestions) { tag in
+                    selectSuggestion(tag)
+                }
+                .padding(.top, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityIdentifier("tag-filter-suggestions")
+            }
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(appState.palette.background)
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(appState.palette.border, lineWidth: 1))
-        .accessibilityIdentifier("tag-filter-summary")
     }
 
-    private func commitDraft() {
-        let tag = draft
+    private var normalizedDraft: String {
+        draft
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "#"))
             .lowercased()
+    }
+
+    private var fieldBorderColor: Color {
+        suggestions.isEmpty ? appState.palette.border : appState.palette.accent
+    }
+
+    private var suggestions: [TagInfo] {
+        let query = normalizedDraft
+        guard !query.isEmpty else { return [] }
+        let selected = Set(notesViewModel.selectedTags.map { $0.lowercased() })
+        return notesViewModel.availableTags
+            .filter { tag in
+                !selected.contains(tag.name.lowercased())
+                    && tag.name.localizedCaseInsensitiveContains(query)
+            }
+            .sorted { lhs, rhs in
+                let lhsPrefix = lhs.name.range(of: query, options: [.caseInsensitive, .anchored]) != nil
+                let rhsPrefix = rhs.name.range(of: query, options: [.caseInsensitive, .anchored]) != nil
+                if lhsPrefix != rhsPrefix { return lhsPrefix && !rhsPrefix }
+                if lhs.noteCount != rhs.noteCount { return lhs.noteCount > rhs.noteCount }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            .prefix(6)
+            .map { $0 }
+    }
+
+    private func commitDraft() {
+        let tag = normalizedDraft
         draft = ""
         guard !tag.isEmpty, !notesViewModel.selectedTags.contains(tag) else { return }
         Task { await notesViewModel.setTagFilters(notesViewModel.selectedTags + [tag]) }
+    }
+
+    private func selectSuggestion(_ tag: TagInfo) {
+        draft = ""
+        Task { await notesViewModel.setTagFilters(notesViewModel.selectedTags + [tag.name]) }
+    }
+}
+
+private struct TagFilterSuggestionsList: View {
+    @EnvironmentObject private var appState: AppState
+    let suggestions: [TagInfo]
+    let onSelect: (TagInfo) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(suggestions) { tag in
+                Button {
+                    onSelect(tag)
+                } label: {
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(priorityColor(for: tag))
+                            .frame(width: 9, height: 9)
+                        Text(tag.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .lineLimit(1)
+                            .foregroundStyle(appState.palette.text)
+                        Spacer()
+                        Text("I:\(tag.importance) U:\(tag.urgency)")
+                            .font(.system(size: 13, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(appState.palette.secondaryText)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 42)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Filter by \(tag.name)")
+
+                if tag.id != suggestions.last?.id {
+                    Divider().overlay(appState.palette.border)
+                }
+            }
+        }
+        .background(appState.palette.card)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(appState.palette.border, lineWidth: 1))
+        .shadow(color: Color.black.opacity(appState.palette.isDark ? 0.28 : 0.12), radius: 16, x: 0, y: 8)
+    }
+
+    private func priorityColor(for tag: TagInfo) -> Color {
+        TagPriority.cardStyle(importance: tag.importance, urgency: tag.urgency, isDark: appState.palette.isDark)?.border
+            ?? appState.palette.secondaryText
     }
 }
 
@@ -696,4 +819,3 @@ private struct SidebarNavModifier: ViewModifier {
             .buttonStyle(.plain)
     }
 }
-

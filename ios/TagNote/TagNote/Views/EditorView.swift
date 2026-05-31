@@ -69,14 +69,6 @@ struct EditorView: View {
                         } label: {
                             Label("Save now", systemImage: "checkmark")
                         }
-                        Button {
-                            Task { await viewModel.togglePin() }
-                        } label: {
-                            Label(viewModel.isPinned ? "Unpin" : "Pin", systemImage: "pin")
-                        }
-                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                            Label("Insert image", systemImage: "photo")
-                        }
                         if !viewModel.isNewNote {
                             Button(role: .destructive) {
                                 showDeletePrompt = true
@@ -205,7 +197,19 @@ struct EditorView: View {
             formatButton("H", systemImage: "textformat.size") { insert(prefix: "## ") }
             formatButton("List", systemImage: "list.bullet") { insert(prefix: "- ") }
             formatButton("Quote", systemImage: "quote.opening") { insert(prefix: "> ") }
+            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                Image(systemName: "photo")
+                    .frame(width: 28, height: 28)
+            }
+            .accessibilityLabel("Insert image")
             Spacer()
+            Button {
+                Task { await viewModel.togglePin() }
+            } label: {
+                Image(systemName: viewModel.isPinned ? "pin.fill" : "pin")
+                    .frame(width: 28, height: 28)
+            }
+            .accessibilityLabel(viewModel.isPinned ? "Unpin" : "Pin")
             Button {
                 Task { await viewModel.saveNow() }
             } label: {
@@ -368,7 +372,7 @@ private struct GhostTagChip: View {
     }
 }
 
-private struct MarkdownPreviewView: View {
+struct MarkdownPreviewView: View {
     @EnvironmentObject private var appState: AppState
     let document: MarkdownDocument
 

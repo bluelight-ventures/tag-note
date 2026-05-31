@@ -3,6 +3,7 @@ import SwiftUI
 struct NotesView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject var viewModel: NotesViewModel
+    var onReadNote: (SubNote) -> Void = { _ in }
     @State private var activeSheet: NotesSheet?
 
     var body: some View {
@@ -106,7 +107,7 @@ struct NotesView: View {
                 Task { await viewModel.toggleTagFilter(tag) }
             },
             onExpand: {
-                activeSheet = .edit(note)
+                onReadNote(note)
             },
             onEdit: {
                 activeSheet = .edit(note)
@@ -175,6 +176,149 @@ private enum NotesSheet: Identifiable {
         case .edit(let note):
             return "edit-\(note.routeID)"
         }
+    }
+}
+
+struct ResizableNoteReadPanel: View {
+    @EnvironmentObject private var appState: AppState
+    @AppStorage("noteReadPanelWidth") private var storedWidth = 700.0
+    @AppStorage("noteReadPanelHeight") private var storedHeight = 640.0
+    @State private var dragStartSize: CGSize?
+
+    let note: SubNote
+    let availableTags: [TagInfo]
+    let onClose: () -> Void
+    let onEdit: () -> Void
+
+    var body: some View {
+        GeometryReader { geometry in
+            let maxWidth = max(1, geometry.size.width - 32)
+            let maxHeight = max(1, geometry.size.height - 48)
+            let minWidth = min(360, maxWidth)
+            let minHeight = min(360, maxHeight)
+            let panelWidth = clamped(storedWidth, min: minWidth, max: maxWidth)
+            let panelHeight = clamped(storedHeight, min: minHeight, max: maxHeight)
+
+            ZStack {
+                Color.black.opacity(appState.palette.isDark ? 0.42 : 0.28)
+                    .ignoresSafeArea()
+                    .onTapGesture(perform: onClose)
+
+                VStack(spacing: 0) {
+                    HStack {
+                        Button("Close", action: onClose)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(appState.palette.accent)
+                            .padding(.horizontal, 18)
+                            .frame(height: 52)
+                            .background(appState.palette.card.opacity(0.86))
+                            .clipShape(Capsule())
+                            .accessibilityIdentifier("note-read-close-button")
+
+                        Spacer()
+
+                        Text("Note")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(appState.palette.text)
+
+                        Spacer()
+
+                        Button(action: onEdit) {
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 19, weight: .semibold))
+                                .frame(width: 52, height: 52)
+                        }
+                        .foregroundStyle(appState.palette.accent)
+                        .background(appState.palette.card.opacity(0.86))
+                        .clipShape(Circle())
+                        .accessibilityLabel("Edit note")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            FlowLayout(spacing: 6, rowSpacing: 6) {
+                                ForEach(note.tags, id: \.self) { tag in
+                                    TagChip(tag, tagInfo: availableTags.first { $0.name == tag })
+                                }
+                            }
+
+                            Text(RelativeTime.format(note.displayDate))
+                                .font(.system(size: 13, weight: .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(appState.palette.secondaryText)
+
+                            MarkdownPreviewView(document: .parse(note.content))
+                                .environmentObject(appState)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 28)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .frame(width: panelWidth, height: panelHeight)
+                .background(appState.palette.card)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(appState.palette.border, lineWidth: 1))
+                .shadow(color: Color.black.opacity(appState.palette.isDark ? 0.36 : 0.18), radius: 24, x: 0, y: 14)
+                .overlay(alignment: .bottomTrailing) {
+                    resizeHandle(panelWidth: panelWidth, panelHeight: panelHeight, minWidth: minWidth, maxWidth: maxWidth, minHeight: minHeight, maxHeight: maxHeight)
+                }
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            }
+            .animation(.snappy(duration: 0.18), value: panelWidth)
+            .animation(.snappy(duration: 0.18), value: panelHeight)
+        }
+        .accessibilityIdentifier("note-read-screen")
+    }
+
+    private func resizeHandle(panelWidth: CGFloat, panelHeight: CGFloat, minWidth: CGFloat, maxWidth: CGFloat, minHeight: CGFloat, maxHeight: CGFloat) -> some View {
+        ResizeGrip()
+            .stroke(appState.palette.secondaryText.opacity(0.65), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .frame(width: 22, height: 22)
+            .padding(14)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        if dragStartSize == nil {
+                            dragStartSize = CGSize(width: panelWidth, height: panelHeight)
+                        }
+                        guard let start = dragStartSize else { return }
+                        storedWidth = Double(clamped(start.width + value.translation.width, min: minWidth, max: maxWidth))
+                        storedHeight = Double(clamped(start.height + value.translation.height, min: minHeight, max: maxHeight))
+                    }
+                    .onEnded { _ in
+                        dragStartSize = nil
+                    }
+            )
+            .accessibilityLabel("Resize note popup")
+    }
+
+    private func clamped(_ value: CGFloat, min minimum: CGFloat, max maximum: CGFloat) -> CGFloat {
+        Swift.min(Swift.max(value, minimum), maximum)
+    }
+
+    private func clamped(_ value: Double, min minimum: CGFloat, max maximum: CGFloat) -> CGFloat {
+        clamped(CGFloat(value), min: minimum, max: maximum)
+    }
+}
+
+private struct ResizeGrip: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let inset: CGFloat = 3
+        let spacing: CGFloat = 6
+
+        for index in 0..<3 {
+            let offset = CGFloat(index) * spacing
+            path.move(to: CGPoint(x: rect.maxX - inset - offset, y: rect.maxY - inset))
+            path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.maxY - inset - offset))
+        }
+
+        return path
     }
 }
 
