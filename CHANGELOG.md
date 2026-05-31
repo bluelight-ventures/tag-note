@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5] - 2026-05-31
+
+### Added
+
+- Added a native iOS TagNote app with authentication, note browsing, search,
+  tag filtering, editing, markdown preview, trash, tag management, settings,
+  image upload support, offline cache fallback, unit tests, and UI test
+  scaffolding.
+- Added an iOS note reader panel and active tag-filter chips for parity with
+  the web app.
+- Added a protected admin Metrics section that reads `/metrics` through the
+  existing admin JWT.
+- Added cross-platform UX guidelines and a shorter UX principles brief for
+  TagNote clients.
+- Added iOS account deletion and privacy metadata for App Store readiness.
+
+### Changed
+
+- Made the iOS app universal and width-adaptive across iPhone, iPad,
+  landscape, Split View, and Stage Manager windows.
+- Aligned iOS visual treatment with the shared TagNote design system, including
+  themed priority colors, save-status states, tag chips, empty states, and
+  responsive note feeds.
+- Updated production Caddy configuration to import co-hosted site drop-ins from
+  `/etc/caddy/sites/*.caddy` without deploys overwriting those site files.
+
+### Fixed
+
+- Kept iOS sidebar and drawer content clear of safe areas, status areas, and
+  iPad window controls.
+- Restored the persistent iPad sidebar in wide windows while preserving the
+  compact drawer layout for narrow windows.
+- Improved iOS test documentation for deterministic screenshot verification.
+
+---
+
 ## [1.4.1] - 2026-05-28
 
 ### Added
@@ -233,7 +269,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.5...HEAD
+[1.5]: https://github.com/runminglu/tag-note/compare/v1.4.1...v1.5
 [1.4.1]: https://github.com/runminglu/tag-note/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/runminglu/tag-note/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/runminglu/tag-note/compare/v1.3.0...v1.3.1
