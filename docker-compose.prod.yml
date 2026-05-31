@@ -10,6 +10,10 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    # Caddy resolves {$TAGNOTE_DOMAIN} in the Caddyfile from its OWN container
+    # environment. Without this, a recreated Caddy falls back to example.com.
+    environment:
+      - TAGNOTE_DOMAIN=${TAGNOTE_DOMAIN:?set TAGNOTE_DOMAIN in .env}
     ports:
       - "80:80"
       - "443:443"
