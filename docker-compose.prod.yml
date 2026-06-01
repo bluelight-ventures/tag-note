@@ -27,6 +27,9 @@ services:
       - caddy-config:/config
     depends_on:
       - tagnote
+    networks:
+      - default
+      - monitoring
 
   tagnote:
     image: ${TAGNOTE_IMAGE:-tagnote:latest}
@@ -54,7 +57,18 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
     security_opt:
       - no-new-privileges:true
+    networks:
+      - default
+      - monitoring
 
 volumes:
   caddy-data:
   caddy-config:
+
+networks:
+  # Cross-project monitoring network (created by the monitoring stack). Declared
+  # external so Caddy and TagNote keep it across container recreates — no more
+  # imperative `docker network connect` needed after every deploy/recreate.
+  monitoring:
+    name: tagnote-network
+    external: true
