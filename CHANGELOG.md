@@ -11,6 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-06-02
+
+### Added
+
+- Tracked upload ownership so authenticated image uploads are tied to the user
+  who created them, and account deletion now removes that user's uploaded files
+  (tracked uploads plus safe legacy `/uploads` references) from the configured
+  upload directory.
+
+### Changed
+
+- Configured iOS app code signing for App Store distribution.
+- Ran the frontend E2E suite in parallel across multiple workers (~6-7s vs ~18s
+  serial), scoping each test's notes and tags to a globally unique suffix so the
+  shared seeded account is safe under concurrency.
+
+### Fixed
+
+- Added a SQLite `busy_timeout` so concurrent writers wait for the single-writer
+  lock instead of failing immediately with `SQLITE_BUSY`, improving reliability
+  for real concurrent users as well as parallel tests.
+- Passed `TAGNOTE_DOMAIN` into the Caddy container so TLS certificate issuance
+  stays correct across container recreates instead of falling back to a default
+  domain.
+- Attached Caddy and TagNote to the monitoring network declaratively in Compose
+  so the `/grafana` upstream survives container recreates without manual network
+  reconnects.
+
+---
+
 ## [1.5.0] - 2026-05-31
 
 ### Added
@@ -269,7 +299,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/runminglu/tag-note/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/runminglu/tag-note/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/runminglu/tag-note/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/runminglu/tag-note/compare/v1.3.1...v1.4.0
