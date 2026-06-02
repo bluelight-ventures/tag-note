@@ -17,25 +17,71 @@ final class TagNoteE2ETests: XCTestCase {
         app = nil
     }
 
+    // Compact width (iPhone, or any device forced compact): the seeded note is
+    // reached through the hamburger-triggered slide-over drawer, and search lives
+    // inside that drawer.
     @MainActor
-    func testLoginShowsSeededNoteAndSearchesContent() async throws {
+    func testCompactDrawerShowsSeededNoteAndSearchesContent() async throws {
+        // Force the compact layout so this exercises the drawer regardless of the
+        // device the suite happens to run on (iPhone or iPad).
+        app.launchEnvironment["TAGNOTE_UI_FORCE_COMPACT"] = "1"
+
         let seeded = try await seedNote()
         app.launch()
-
         configureServerIfNeeded()
         loginIfNeeded()
 
-        let returnedNotesScreen = app.descendants(matching: .any)["notes-screen"]
-        XCTAssertTrue(returnedNotesScreen.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", seeded.title)).firstMatch.waitForExistence(timeout: 10))
+        let notesScreen = app.descendants(matching: .any)["notes-screen"]
+        XCTAssertTrue(notesScreen.waitForExistence(timeout: 10))
+        XCTAssertTrue(containsText(seeded.title))
 
-        app.descendants(matching: .any)["sidebar-open-button"].tap()
+        // The drawer (and its search field) is hidden until the hamburger opens it.
+        let menuButton = app.descendants(matching: .any)["sidebar-open-button"]
+        XCTAssertTrue(menuButton.waitForExistence(timeout: 5), "Compact layout must show the hamburger menu button")
+        menuButton.tap()
 
         let searchField = app.textFields["note-search-field"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         searchField.tap()
         searchField.typeText(seeded.bodyNeedle)
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", seeded.title)).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(containsText(seeded.title))
+    }
+
+    // Regular width (iPad full screen / wide Stage Manager window): the sidebar is
+    // persistent — search and navigation are visible at launch with no hamburger.
+    // Skips on compact-width devices so the same suite stays green on iPhone.
+    @MainActor
+    func testRegularWidthShowsPersistentSidebarAndSearches() async throws {
+        let seeded = try await seedNote()
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+
+        let notesScreen = app.descendants(matching: .any)["notes-screen"]
+        XCTAssertTrue(notesScreen.waitForExistence(timeout: 10))
+
+        // If the hamburger appears, we are at compact width — the persistent
+        // sidebar does not apply here.
+        if app.descendants(matching: .any)["sidebar-open-button"].waitForExistence(timeout: 3) {
+            throw XCTSkip("Persistent sidebar only renders at regular width (iPad); skipping on compact width.")
+        }
+
+        // Persistent sidebar: navigation and search are already on screen.
+        XCTAssertTrue(app.descendants(matching: .any)["sidebar-notes-button"].exists, "Regular layout must show the persistent sidebar navigation")
+        XCTAssertTrue(containsText(seeded.title))
+
+        let searchField = app.textFields["note-search-field"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5), "Search field must be visible without opening a drawer at regular width")
+        searchField.tap()
+        searchField.typeText(seeded.bodyNeedle)
+        XCTAssertTrue(containsText(seeded.title))
+    }
+
+    private func containsText(_ needle: String) -> Bool {
+        app.staticTexts
+            .containing(NSPredicate(format: "label CONTAINS %@", needle))
+            .firstMatch
+            .waitForExistence(timeout: 10)
     }
 
     private func configureServerIfNeeded() {
@@ -43,6 +89,11 @@ final class TagNoteE2ETests: XCTestCase {
         guard serverField.waitForExistence(timeout: 2) else { return }
 
         serverField.tap()
+        // The field is pre-filled with the default hosted server; clear it
+        // before typing the test server URL.
+        if let current = serverField.value as? String, !current.isEmpty {
+            serverField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+        }
         serverField.typeText(app.launchEnvironment["TAGNOTE_E2E_SERVER_URL"] ?? "http://localhost:3777")
         app.descendants(matching: .any)["server-continue-button"].tap()
     }
