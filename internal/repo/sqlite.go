@@ -19,7 +19,10 @@ type SQLiteRepo struct {
 
 // NewSQLiteRepo opens the SQLite database and runs migrations.
 func NewSQLiteRepo(dbPath string) (*SQLiteRepo, error) {
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)")
+	// busy_timeout makes concurrent writers wait for the lock (up to 5s) instead
+	// of failing immediately with SQLITE_BUSY, which matters whenever multiple
+	// requests write at once (real concurrent users and parallel e2e tests).
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}

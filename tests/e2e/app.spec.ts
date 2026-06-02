@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 
-test.describe.configure({ mode: 'serial' });
+// Tests run in parallel (see playwright.config.ts). They share the seeded
+// test@test.com account and the same database, so every test must scope its
+// data to a globally unique suffix to avoid cross-test interference.
+function uniqueSuffix() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 let adminToken = '';
 
@@ -99,7 +104,7 @@ test('public health endpoint exposes only minimal liveness', async ({ request })
 });
 
 test('test user can create, filter, and delete notes', async ({ page }) => {
-  const suffix = Date.now().toString(36);
+  const suffix = uniqueSuffix();
   const primaryContent = `E2E primary note ${suffix}`;
   const secondaryContent = `E2E secondary note ${suffix}`;
   const primaryTag = `e2e-${suffix}`;
@@ -119,7 +124,7 @@ test('test user can create, filter, and delete notes', async ({ page }) => {
 });
 
 test('guest mode can create a local note', async ({ page }) => {
-  const suffix = Date.now().toString(36);
+  const suffix = uniqueSuffix();
   const content = `Guest E2E note ${suffix}`;
   const tag = `guest-${suffix}`;
 
@@ -132,7 +137,7 @@ test('guest mode can create a local note', async ({ page }) => {
 });
 
 test('test user note creation autosaves and closes without discard warning', async ({ page }) => {
-  const suffix = Date.now().toString(36);
+  const suffix = uniqueSuffix();
   const content = `Autosaved E2E note ${suffix}`;
   const tag = `autosave-${suffix}`;
 
@@ -152,7 +157,7 @@ test('test user note creation autosaves and closes without discard warning', asy
 });
 
 test('test user note edits autosave without clicking save', async ({ page }) => {
-  const suffix = Date.now().toString(36);
+  const suffix = uniqueSuffix();
   const originalContent = `Autosave edit original ${suffix}`;
   const editedContent = `Autosave edit updated ${suffix}`;
   const tag = `autosave-edit-${suffix}`;
@@ -171,7 +176,7 @@ test('test user note edits autosave without clicking save', async ({ page }) => 
 });
 
 test('guest mode note creation autosaves locally', async ({ page }) => {
-  const suffix = Date.now().toString(36);
+  const suffix = uniqueSuffix();
   const content = `Guest autosaved note ${suffix}`;
   const tag = `guest-auto-${suffix}`;
 
@@ -192,7 +197,7 @@ test('guest mode note creation autosaves locally', async ({ page }) => {
 });
 
 test('account deletion removes uploaded image files', async ({ request }) => {
-  const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const suffix = uniqueSuffix();
   const email = `delete-upload-${suffix}@example.com`;
   const password = 'testpass123';
 
