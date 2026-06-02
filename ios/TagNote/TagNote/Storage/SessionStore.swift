@@ -9,6 +9,10 @@ final class SessionStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var isLoading = false
 
+    /// Default hosted instance, pre-filled on the server-setup screen so the
+    /// app works out of the box (and App Review can sign in without setup).
+    static let defaultServerURL = "https://tag-note.com"
+
     let api: TagNoteAPI
     let cache: LocalCache
 

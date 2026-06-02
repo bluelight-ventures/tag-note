@@ -33,7 +33,7 @@ struct RootView: View {
 struct ServerSetupView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
-    @State private var serverURL = ""
+    @State private var serverURL = SessionStore.defaultServerURL
     @State private var errorMessage: String?
 
     var body: some View {
