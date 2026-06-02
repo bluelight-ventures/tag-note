@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -36,10 +37,12 @@ type AuthService struct {
 	jwtSecret      []byte
 	emailService   *EmailService
 	googleClientID string
+	uploadDir      string
 }
 
-// NewAuth creates a new AuthService.
-func NewAuth(r repo.Repository, emailService *EmailService) (*AuthService, error) {
+// NewAuth creates a new AuthService. uploadDir is the filesystem directory used
+// for account-level upload cleanup.
+func NewAuth(r repo.Repository, emailService *EmailService, uploadDir string) (*AuthService, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		if os.Getenv("TAGNOTE_TEST_MODE") == "1" || os.Getenv("TAGNOTE_ALLOW_DEV_SECRET") == "1" {
@@ -53,6 +56,7 @@ func NewAuth(r repo.Repository, emailService *EmailService) (*AuthService, error
 		jwtSecret:      []byte(secret),
 		emailService:   emailService,
 		googleClientID: os.Getenv("GOOGLE_CLIENT_ID"),
+		uploadDir:      uploadDir,
 	}, nil
 }
 
@@ -529,9 +533,48 @@ func (a *AuthService) GetUser(ctx context.Context, userID string) (*model.User, 
 	return a.repo.FindUserByID(ctx, userID)
 }
 
-// DeleteAccount permanently deletes a user's account and database-backed data.
+// DeleteAccount permanently deletes a user's account, database-backed data, and
+// uploaded files that belong to the user.
 func (a *AuthService) DeleteAccount(ctx context.Context, userID string) error {
-	return a.repo.DeleteUser(ctx, userID)
+	// Collect the upload filenames before deletion: DeleteUser cascades away the
+	// uploads rows and notes that these are derived from.
+	filenames, err := a.repo.ListUserUploadFilenames(ctx, userID)
+	if err != nil {
+		return err
+	}
+	// Delete the account record first — it is the privacy-critical source of
+	// truth. Only once it is gone do we remove the now-orphaned files, so a
+	// failed DB delete never leaves an intact account with missing images.
+	if err := a.repo.DeleteUser(ctx, userID); err != nil {
+		return err
+	}
+	return a.deleteUploadFiles(filenames)
+}
+
+func (a *AuthService) deleteUploadFiles(filenames []string) error {
+	if a.uploadDir == "" {
+		return nil
+	}
+	for _, filename := range filenames {
+		path, ok := a.safeUploadPath(filename)
+		if !ok {
+			continue
+		}
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("delete upload %q: %w", filename, err)
+		}
+	}
+	return nil
+}
+
+func (a *AuthService) safeUploadPath(filename string) (string, bool) {
+	// filepath.Base collapses any path to its last element, so requiring the
+	// name to equal its own base rejects separators and traversal; the explicit
+	// ".." guard covers the one base value that is itself traversal.
+	if filename == "" || filename == ".." || filename != filepath.Base(filename) {
+		return "", false
+	}
+	return filepath.Join(a.uploadDir, filename), true
 }
 
 // ValidateToken parses a JWT and returns the user ID from claims.

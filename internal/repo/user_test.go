@@ -37,6 +37,9 @@ func TestDeleteUserRemovesAccountData(t *testing.T) {
 	if err := r.CreatePasswordResetToken(ctx, "reset-delete", userID, "reset-token", now.Add(time.Hour)); err != nil {
 		t.Fatalf("CreatePasswordResetToken() error = %v", err)
 	}
+	if err := r.CreateUpload(ctx, userID, "upload-delete", "delete.png", "image/png", 123, now); err != nil {
+		t.Fatalf("CreateUpload() error = %v", err)
+	}
 
 	if err := r.DeleteUser(ctx, userID); err != nil {
 		t.Fatalf("DeleteUser() error = %v", err)
@@ -54,5 +57,12 @@ func TestDeleteUserRemovesAccountData(t *testing.T) {
 	}
 	if len(notes) != 1 || notes[0].ID != "note-keep" {
 		t.Fatalf("Search(other) = %#v, want note-keep", notes)
+	}
+	var uploadCount int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM uploads WHERE user_id = ?`, userID).Scan(&uploadCount); err != nil {
+		t.Fatalf("count uploads: %v", err)
+	}
+	if uploadCount != 0 {
+		t.Fatalf("deleted user upload count = %d, want 0", uploadCount)
 	}
 }

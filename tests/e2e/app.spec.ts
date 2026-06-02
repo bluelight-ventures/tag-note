@@ -191,6 +191,60 @@ test('guest mode note creation autosaves locally', async ({ page }) => {
   await expect(page.getByTestId('note-card').filter({ hasText: content })).toBeVisible();
 });
 
+test('account deletion removes uploaded image files', async ({ request }) => {
+  const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const email = `delete-upload-${suffix}@example.com`;
+  const password = 'testpass123';
+
+  const registerResponse = await request.post('/api/v1/auth/register', {
+    data: {
+      email,
+      password,
+      display_name: 'Delete Upload E2E',
+    },
+  });
+  expect(registerResponse.status()).toBe(201);
+  const registerBody = await registerResponse.json();
+  expect(registerBody.token).toBeTruthy();
+
+  const uploadResponse = await request.post('/api/v1/images', {
+    headers: {
+      Authorization: `Bearer ${registerBody.token}`,
+    },
+    multipart: {
+      file: {
+        name: 'account-delete.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('png-bytes'),
+      },
+    },
+  });
+  expect(uploadResponse.status()).toBe(201);
+  const uploadBody = await uploadResponse.json();
+  const filePath = uploadBody.data?.filePath;
+  expect(filePath).toMatch(/^\/uploads\/[a-z0-9]+\.png$/);
+
+  const uploadedBeforeDelete = await request.get(filePath);
+  expect(uploadedBeforeDelete.status()).toBe(200);
+
+  const deleteResponse = await request.delete('/api/v1/auth/account', {
+    headers: {
+      Authorization: `Bearer ${registerBody.token}`,
+    },
+  });
+  expect(deleteResponse.status()).toBe(204);
+
+  // The file is unlinked synchronously, but fasthttp's static file-handle cache
+  // can keep serving the descriptor opened by the GET above for a short window
+  // (shortened in test mode). Poll until the cache evicts and the file 404s.
+  await expect
+    .poll(async () => (await request.get(filePath)).status(), {
+      timeout: 15_000,
+      intervals: [2_000],
+    })
+    .toBe(404);
+});
+
 test('operational endpoints require explicit credentials', async ({ request }) => {
   for (const path of ['/status', '/metrics']) {
     const directResponse = await request.get(path);

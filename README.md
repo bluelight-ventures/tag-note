@@ -133,6 +133,7 @@ API routes are served under `/api/v1`. All routes except authentication require
 | `POST` | `/api/v1/auth/reset-password` | Reset password with token. |
 | `POST` | `/api/v1/auth/magic-link` | Request a passwordless login link. |
 | `POST` | `/api/v1/auth/verify-magic-link` | Verify a magic-link token. |
+| `DELETE` | `/api/v1/auth/account` | Permanently delete the current account and owned data. |
 
 ### Notes, Tags, And Settings
 
@@ -180,10 +181,11 @@ API routes are served under `/api/v1`. All routes except authentication require
 ## Attachment Privacy
 
 Notes, tags, settings, and trash are account-scoped. Uploaded image files are
-stored under random filenames and embedded in notes as `/uploads/...` URLs.
-Treat those image URLs as link-private: anyone who obtains a file URL can fetch
-that specific file. Do not upload sensitive attachments unless your deployment
-adds authenticated media serving.
+stored under random filenames, recorded with account ownership, and embedded in
+notes as `/uploads/...` URLs. Account deletion removes owned uploads and legacy
+upload URLs referenced by the user's notes. Treat image URLs as link-private:
+anyone who obtains a file URL can fetch that specific file. Do not upload
+sensitive attachments unless your deployment adds authenticated media serving.
 
 ## CLI Tools
 

@@ -53,13 +53,13 @@ func main() {
 
 	emailSvc := service.NewEmailService()
 	svc := service.New(r)
-	authSvc, err := service.NewAuth(r, emailSvc)
+	authSvc, err := service.NewAuth(r, emailSvc, *uploadDir)
 	if err != nil {
 		log.Fatalf("init auth: %v", err)
 	}
 	h := handler.New(svc)
 	ah := handler.NewAuth(authSvc)
-	ih := handler.NewImage(*uploadDir)
+	ih := handler.NewImage(*uploadDir, r)
 
 	// Load admin config
 	adminCfg := admin.LoadConfig()
@@ -153,9 +153,15 @@ func main() {
 	})
 
 	// Serve uploaded images
-	app.Static("/uploads", *uploadDir, fiber.Static{
-		Browse: false,
-	})
+	uploadStatic := fiber.Static{Browse: false}
+	if os.Getenv("TAGNOTE_TEST_MODE") == "1" {
+		// fasthttp keeps an open-file-handle cache (default 10s) that keeps
+		// serving a file even after it is unlinked on account deletion.
+		// Production keeps that cache for performance; the test environment
+		// shortens it so e2e assertions can observe the deletion promptly.
+		uploadStatic.CacheDuration = time.Second
+	}
+	app.Static("/uploads", *uploadDir, uploadStatic)
 
 	// Landing page at exact "/"
 	app.Get("/", func(c *fiber.Ctx) error {

@@ -119,6 +119,9 @@ func (r *SQLiteRepo) DeleteUser(ctx context.Context, userID string) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM audit_logs WHERE user_id = ?`, userID); err != nil {
 		return err
 	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM uploads WHERE user_id = ?`, userID); err != nil {
+		return err
+	}
 
 	res, err := tx.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, userID)
 	if err != nil {

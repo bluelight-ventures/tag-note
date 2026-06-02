@@ -66,6 +66,10 @@ type Repository interface {
 	DeleteMagicLinkTokens(ctx context.Context, userID string) error
 	UpdatePassword(ctx context.Context, userID, passwordHash string) error
 
+	// Upload methods
+	CreateUpload(ctx context.Context, userID, id, filename, contentType string, size int64, createdAt time.Time) error
+	ListUserUploadFilenames(ctx context.Context, userID string) ([]string, error)
+
 	// User settings methods
 	GetSettings(ctx context.Context, userID string) (*model.Settings, error)
 	SaveSettings(ctx context.Context, userID string, settings model.Settings) error

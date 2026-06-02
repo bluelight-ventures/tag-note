@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 
+CREATE TABLE IF NOT EXISTS uploads (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    filename     TEXT NOT NULL UNIQUE,
+    content_type TEXT NOT NULL,
+    size         INTEGER NOT NULL,
+    created_at   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_uploads_user_id ON uploads(user_id);
+CREATE INDEX IF NOT EXISTS idx_uploads_filename ON uploads(filename);
+
 CREATE TABLE IF NOT EXISTS subnotes (
     id         TEXT PRIMARY KEY,
     content    TEXT NOT NULL,
@@ -164,6 +176,10 @@ func Migrate(db *sql.DB) error {
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_magic_link_tokens_token ON magic_link_tokens(token)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_magic_link_tokens_user_id ON magic_link_tokens(user_id)`)
+
+	// The uploads table backs account-scoped upload ownership and deletion. It
+	// is defined in the error-checked schema block above so a failure to create
+	// it fails startup.
 
 	return nil
 }

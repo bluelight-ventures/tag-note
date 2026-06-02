@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -29,10 +30,16 @@ func New(svc *service.Service) *Handler {
 func (h *Handler) Register(app *fiber.App, ah *AuthHandler, ih *ImageHandler, auth *service.AuthService, auditMiddleware ...fiber.Handler) {
 	api := app.Group("/api/v1")
 
-	// Auth routes — rate limited, no JWT middleware
+	// Auth routes — rate limited, no JWT middleware. The e2e suite drives many
+	// accounts from a single IP, so the limit is relaxed in test mode while
+	// production keeps the strict per-IP cap.
+	authMax := 5
+	if os.Getenv("TAGNOTE_TEST_MODE") == "1" {
+		authMax = 1000
+	}
 	authGroup := api.Group("/auth")
 	authGroup.Use(limiter.New(limiter.Config{
-		Max:        5,
+		Max:        authMax,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
