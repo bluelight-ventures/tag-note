@@ -36,11 +36,12 @@ func (r *SQLiteRepo) FindUserByEmail(ctx context.Context, email string) (*model.
 	var ts string
 	var passwordHash sql.NullString
 	var googleID sql.NullString
+	var appleID sql.NullString
 	var emailVerified int
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, email, password_hash, display_name, created_at, google_id, email_verified FROM users WHERE email = ?`, email).
-		Scan(&u.ID, &u.Email, &passwordHash, &u.DisplayName, &ts, &googleID, &emailVerified)
+		`SELECT id, email, password_hash, display_name, created_at, google_id, apple_id, email_verified FROM users WHERE email = ?`, email).
+		Scan(&u.ID, &u.Email, &passwordHash, &u.DisplayName, &ts, &googleID, &appleID, &emailVerified)
 	if err == sql.ErrNoRows {
 		return nil, "", ErrNotFound
 	}
@@ -52,6 +53,7 @@ func (r *SQLiteRepo) FindUserByEmail(ctx context.Context, email string) (*model.
 	u.EmailVerified = emailVerified == 1
 	u.HasPassword = passwordHash.Valid && passwordHash.String != ""
 	u.HasGoogle = googleID.Valid && googleID.String != ""
+	u.HasApple = appleID.Valid && appleID.String != ""
 
 	return &u, passwordHash.String, nil
 }
@@ -62,11 +64,12 @@ func (r *SQLiteRepo) FindUserByID(ctx context.Context, id string) (*model.User, 
 	var ts string
 	var passwordHash sql.NullString
 	var googleID sql.NullString
+	var appleID sql.NullString
 	var emailVerified int
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, email, display_name, created_at, password_hash, google_id, email_verified FROM users WHERE id = ?`, id).
-		Scan(&u.ID, &u.Email, &u.DisplayName, &ts, &passwordHash, &googleID, &emailVerified)
+		`SELECT id, email, display_name, created_at, password_hash, google_id, apple_id, email_verified FROM users WHERE id = ?`, id).
+		Scan(&u.ID, &u.Email, &u.DisplayName, &ts, &passwordHash, &googleID, &appleID, &emailVerified)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -78,6 +81,7 @@ func (r *SQLiteRepo) FindUserByID(ctx context.Context, id string) (*model.User, 
 	u.EmailVerified = emailVerified == 1
 	u.HasPassword = passwordHash.Valid && passwordHash.String != ""
 	u.HasGoogle = googleID.Valid && googleID.String != ""
+	u.HasApple = appleID.Valid && appleID.String != ""
 
 	return &u, nil
 }
@@ -144,11 +148,12 @@ func (r *SQLiteRepo) FindUserByGoogleID(ctx context.Context, googleID string) (*
 	var ts string
 	var passwordHash sql.NullString
 	var gID sql.NullString
+	var appleID sql.NullString
 	var emailVerified int
 
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, email, display_name, created_at, password_hash, google_id, email_verified FROM users WHERE google_id = ?`, googleID).
-		Scan(&u.ID, &u.Email, &u.DisplayName, &ts, &passwordHash, &gID, &emailVerified)
+		`SELECT id, email, display_name, created_at, password_hash, google_id, apple_id, email_verified FROM users WHERE google_id = ?`, googleID).
+		Scan(&u.ID, &u.Email, &u.DisplayName, &ts, &passwordHash, &gID, &appleID, &emailVerified)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -160,8 +165,58 @@ func (r *SQLiteRepo) FindUserByGoogleID(ctx context.Context, googleID string) (*
 	u.EmailVerified = emailVerified == 1
 	u.HasPassword = passwordHash.Valid && passwordHash.String != ""
 	u.HasGoogle = gID.Valid && gID.String != ""
+	u.HasApple = appleID.Valid && appleID.String != ""
 
 	return &u, nil
+}
+
+// FindUserByAppleID looks up a user by Apple subject ID.
+func (r *SQLiteRepo) FindUserByAppleID(ctx context.Context, appleID string) (*model.User, error) {
+	var u model.User
+	var ts string
+	var passwordHash sql.NullString
+	var googleID sql.NullString
+	var aID sql.NullString
+	var emailVerified int
+
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id, email, display_name, created_at, password_hash, google_id, apple_id, email_verified FROM users WHERE apple_id = ?`, appleID).
+		Scan(&u.ID, &u.Email, &u.DisplayName, &ts, &passwordHash, &googleID, &aID, &emailVerified)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	u.CreatedAt, _ = time.Parse(time.RFC3339Nano, ts)
+	u.EmailVerified = emailVerified == 1
+	u.HasPassword = passwordHash.Valid && passwordHash.String != ""
+	u.HasGoogle = googleID.Valid && googleID.String != ""
+	u.HasApple = aID.Valid && aID.String != ""
+
+	return &u, nil
+}
+
+// LinkAppleID links an Apple subject ID to an existing user.
+func (r *SQLiteRepo) LinkAppleID(ctx context.Context, userID, appleID string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE users SET apple_id = ? WHERE id = ?`, appleID, userID)
+	return err
+}
+
+// CreateUserWithApple creates a new user using Sign in with Apple (email auto-verified).
+func (r *SQLiteRepo) CreateUserWithApple(ctx context.Context, id, email, appleID, displayName string, createdAt time.Time) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO users (id, email, password_hash, display_name, created_at, apple_id, email_verified) VALUES (?, ?, NULL, ?, ?, ?, 1)`,
+		id, email, displayName, createdAt.UTC().Format(time.RFC3339Nano), appleID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint") {
+			return ErrEmailExists
+		}
+		return err
+	}
+	return nil
 }
 
 // LinkGoogleID links a Google OAuth subject ID to an existing user.

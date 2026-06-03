@@ -50,6 +50,11 @@ type Repository interface {
 	CreateUserWithGoogle(ctx context.Context, id, email, googleID, displayName string, createdAt time.Time) error
 	CreateUserWithoutPassword(ctx context.Context, id, email, displayName string, createdAt time.Time) error
 
+	// Sign in with Apple methods
+	FindUserByAppleID(ctx context.Context, appleID string) (*model.User, error)
+	LinkAppleID(ctx context.Context, userID, appleID string) error
+	CreateUserWithApple(ctx context.Context, id, email, appleID, displayName string, createdAt time.Time) error
+
 	// Email verification methods
 	SetEmailVerified(ctx context.Context, userID string, verified bool) error
 	CreateEmailVerificationToken(ctx context.Context, id, userID, token string, expiresAt time.Time) error

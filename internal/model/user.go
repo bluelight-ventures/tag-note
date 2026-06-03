@@ -11,6 +11,7 @@ type User struct {
 	EmailVerified bool      `json:"email_verified"`
 	HasPassword   bool      `json:"has_password"`
 	HasGoogle     bool      `json:"has_google"`
+	HasApple      bool      `json:"has_apple"`
 }
 
 // RegisterRequest is the input for user registration.
@@ -37,6 +38,17 @@ type AuthResponse struct {
 // GoogleAuthRequest is the input for Google OAuth authentication.
 type GoogleAuthRequest struct {
 	IDToken string `json:"id_token"`
+}
+
+// AppleAuthRequest is the input for Sign in with Apple authentication.
+type AppleAuthRequest struct {
+	IdentityToken string `json:"identity_token"`
+	// Nonce is the raw (unhashed) nonce the client used; the identity token
+	// carries its SHA-256. Optional but recommended.
+	Nonce string `json:"nonce,omitempty"`
+	// FullName is only provided by Apple on the first authorization and is not
+	// part of the identity token, so the client passes it through here.
+	FullName string `json:"full_name,omitempty"`
 }
 
 // ForgotPasswordRequest is the input for password reset request.

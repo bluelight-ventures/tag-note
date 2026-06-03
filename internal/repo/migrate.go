@@ -136,6 +136,10 @@ func Migrate(db *sql.DB) error {
 	// Create index on google_id for faster lookups.
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)`)
 
+	// Add apple_id column to users if missing (for Sign in with Apple).
+	db.Exec(`ALTER TABLE users ADD COLUMN apple_id TEXT`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id)`)
+
 	// Auto-verify existing users (they registered before email verification was required).
 	db.Exec(`UPDATE users SET email_verified = 1 WHERE email_verified = 0 AND id != '00000000000000000000000000'`)
 

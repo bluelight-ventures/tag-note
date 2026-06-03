@@ -108,6 +108,28 @@ func (h *AuthHandler) GoogleAuth(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
+// AppleAuth handles POST /api/v1/auth/apple.
+func (h *AuthHandler) AppleAuth(c *fiber.Ctx) error {
+	var req model.AppleAuthRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid request body",
+		})
+	}
+	if req.IdentityToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "identity_token is required",
+		})
+	}
+	resp, err := h.auth.AppleLogin(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	return c.JSON(resp)
+}
+
 // VerifyEmail handles POST /api/v1/auth/verify-email.
 func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 	var req model.VerifyEmailRequest

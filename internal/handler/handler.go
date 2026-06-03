@@ -54,6 +54,7 @@ func (h *Handler) Register(app *fiber.App, ah *AuthHandler, ih *ImageHandler, au
 	authGroup.Post("/login", ah.Login)
 	authGroup.Post("/logout", ah.Logout)
 	authGroup.Post("/google", ah.GoogleAuth)
+	authGroup.Post("/apple", ah.AppleAuth)
 	authGroup.Post("/verify-email", ah.VerifyEmail)
 	authGroup.Post("/resend-verification", ah.ResendVerification)
 	authGroup.Post("/forgot-password", ah.ForgotPassword)
