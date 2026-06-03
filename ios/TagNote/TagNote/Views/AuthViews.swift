@@ -1,3 +1,5 @@
+import AuthenticationServices
+import CryptoKit
 import SwiftUI
 
 struct AuthView: View {
@@ -7,6 +9,7 @@ struct AuthView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
+    @State private var appleRawNonce: String?
 
     enum Mode: String, CaseIterable, Identifiable {
         case login
@@ -103,6 +106,28 @@ struct AuthView: View {
                     }
                     .font(.footnote)
 
+                    HStack(spacing: 10) {
+                        Rectangle().fill(appState.palette.border).frame(height: 1)
+                        Text("or")
+                            .font(.footnote)
+                            .foregroundStyle(appState.palette.secondaryText)
+                        Rectangle().fill(appState.palette.border).frame(height: 1)
+                    }
+                    .padding(.vertical, 2)
+
+                    SignInWithAppleButton(.signIn) { request in
+                        let raw = randomNonceString()
+                        appleRawNonce = raw
+                        request.requestedScopes = [.fullName, .email]
+                        request.nonce = sha256Hex(raw)
+                    } onCompletion: { result in
+                        handleAppleResult(result)
+                    }
+                    .signInWithAppleButtonStyle(appState.palette.isDark ? .white : .black)
+                    .frame(height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .accessibilityIdentifier("apple-signin-button")
+
                     // Custom-server switching is a Debug-only affordance; the
                     // shipped build is a tag-note.com client.
                     if SessionStore.allowsCustomServer {
@@ -120,6 +145,58 @@ struct AuthView: View {
             .background(appState.palette.background.ignoresSafeArea())
         }
     }
+
+    private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard
+                let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                let tokenData = credential.identityToken,
+                let identityToken = String(data: tokenData, encoding: .utf8)
+            else {
+                session.errorMessage = "Apple sign-in failed."
+                return
+            }
+            // fullName is only provided on the first authorization.
+            let fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            let nonce = appleRawNonce
+            Task {
+                await session.loginWithApple(
+                    identityToken: identityToken,
+                    nonce: nonce,
+                    fullName: fullName.isEmpty ? nil : fullName
+                )
+                if session.isAuthenticated {
+                    await appState.refreshSettings()
+                }
+            }
+        case .failure(let error):
+            // Don't show an error when the user simply cancels the sheet.
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                return
+            }
+            session.errorMessage = "Apple sign-in failed."
+        }
+    }
+}
+
+// Generates a cryptographically random nonce string (Apple's recommended
+// pattern). The raw value goes to the backend; its SHA-256 goes to Apple.
+private func randomNonceString(length: Int = 32) -> String {
+    precondition(length > 0)
+    var randomBytes = [UInt8](repeating: 0, count: length)
+    let status = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+    if status != errSecSuccess {
+        fatalError("Unable to generate nonce: SecRandomCopyBytes failed (\(status))")
+    }
+    let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+    return String(randomBytes.map { charset[Int($0) % charset.count] })
+}
+
+private func sha256Hex(_ input: String) -> String {
+    SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
 }
 
 private struct TagNoteTextField: ViewModifier {

@@ -82,6 +82,12 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func loginWithApple(identityToken: String, nonce: String?, fullName: String?) async {
+        await authenticate {
+            try await api.appleLogin(identityToken: identityToken, nonce: nonce, fullName: fullName)
+        }
+    }
+
     func requestMagicLink(email: String) async {
         await runMessageTask(success: "Check your email for a login link.") {
             try await api.requestMagicLink(email: email)

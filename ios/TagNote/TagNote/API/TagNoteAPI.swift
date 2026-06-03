@@ -58,6 +58,13 @@ final class TagNoteAPI {
         try await request("POST", "/auth/register", body: ["email": email, "password": password, "display_name": displayName], authorized: false)
     }
 
+    func appleLogin(identityToken: String, nonce: String?, fullName: String?) async throws -> AuthResponse {
+        var body: [String: String] = ["identity_token": identityToken]
+        if let nonce, !nonce.isEmpty { body["nonce"] = nonce }
+        if let fullName, !fullName.isEmpty { body["full_name"] = fullName }
+        return try await request("POST", "/auth/apple", body: body, authorized: false)
+    }
+
     func requestMagicLink(email: String) async throws {
         let _: EmptyResponse = try await request("POST", "/auth/magic-link", body: ["email": email], authorized: false)
     }

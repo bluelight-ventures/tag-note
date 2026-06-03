@@ -9,8 +9,9 @@ struct User: Codable, Equatable {
     let emailVerified: Bool
     let hasPassword: Bool
     let hasGoogle: Bool
+    let hasApple: Bool
 
-    init(id: String, email: String, displayName: String, createdAt: Date, emailVerified: Bool, hasPassword: Bool, hasGoogle: Bool) {
+    init(id: String, email: String, displayName: String, createdAt: Date, emailVerified: Bool, hasPassword: Bool, hasGoogle: Bool, hasApple: Bool = false) {
         self.id = id
         self.email = email
         self.displayName = displayName
@@ -18,6 +19,7 @@ struct User: Codable, Equatable {
         self.emailVerified = emailVerified
         self.hasPassword = hasPassword
         self.hasGoogle = hasGoogle
+        self.hasApple = hasApple
     }
 
     init(from decoder: Decoder) throws {
@@ -29,6 +31,7 @@ struct User: Codable, Equatable {
         emailVerified = try container.decodeIfPresent(Bool.self, forKey: .emailVerified) ?? false
         hasPassword = try container.decodeIfPresent(Bool.self, forKey: .hasPassword) ?? true
         hasGoogle = try container.decodeIfPresent(Bool.self, forKey: .hasGoogle) ?? false
+        hasApple = try container.decodeIfPresent(Bool.self, forKey: .hasApple) ?? false
     }
 }
 

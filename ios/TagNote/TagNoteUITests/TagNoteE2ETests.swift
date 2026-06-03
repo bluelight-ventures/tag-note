@@ -17,6 +17,26 @@ final class TagNoteE2ETests: XCTestCase {
         app = nil
     }
 
+    // The auth screen must offer Sign in with Apple (Apple Guideline 4.8 / our
+    // social-login support). Needs no backend login — just the auth surface.
+    @MainActor
+    func testAuthScreenOffersAppleSignIn() async throws {
+        app.launch()
+        configureServerIfNeeded()
+
+        // The email field confirms we reached the auth screen.
+        XCTAssertTrue(app.textFields["login-email-field"].waitForExistence(timeout: 8))
+
+        let byID = app.descendants(matching: .any)["apple-signin-button"]
+        let byLabel = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "Apple")
+        ).firstMatch
+        XCTAssertTrue(
+            byID.waitForExistence(timeout: 5) || byLabel.waitForExistence(timeout: 3),
+            "Sign in with Apple button should be present on the auth screen"
+        )
+    }
+
     // Compact width (iPhone, or any device forced compact): the seeded note is
     // reached through the hamburger-triggered slide-over drawer, and search lives
     // inside that drawer.
