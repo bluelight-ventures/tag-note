@@ -5,7 +5,7 @@ This file is for AI coding agents working in this repository. `AGENTS.md` and
 
 ## Project
 
-TagNote (`tsn`) is a self-hosted note-taking app built with Go, Fiber, SQLite,
+TagNote (`tsn`) is a note-taking app built with Go, Fiber, SQLite,
 and an embedded vanilla JavaScript frontend.
 
 ## Critical Safety Rules

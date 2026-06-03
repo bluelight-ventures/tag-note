@@ -48,7 +48,7 @@ For a physical iPhone, use the Mac's LAN address instead, for example:
 http://192.168.1.20:3777
 ```
 
-Production/self-hosted use should be served over HTTPS.
+Production use should be served over HTTPS.
 
 ## Run iOS Tests
 

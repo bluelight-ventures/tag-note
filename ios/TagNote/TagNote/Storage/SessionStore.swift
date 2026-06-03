@@ -13,7 +13,7 @@ final class SessionStore: ObservableObject {
     /// pre-fill it on the server-setup screen but allow overriding it.
     static let defaultServerURL = "https://tag-note.com"
 
-    /// Whether the user may point the app at a custom/self-hosted server.
+    /// Whether the user may point the app at a custom server.
     /// Only Debug builds (local development and the E2E suite) expose this;
     /// the shipped App Store build is a tag-note.com-only client.
     static var allowsCustomServer: Bool {

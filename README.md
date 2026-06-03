@@ -3,7 +3,7 @@
 [![CI](https://github.com/runminglu/tag-note/actions/workflows/ci.yml/badge.svg)](https://github.com/runminglu/tag-note/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-TagNote is a self-hosted note-taking app organized around tags instead of folders.
+TagNote is a note-taking app organized around tags instead of folders.
 Write Markdown notes, attach tags, and filter by tag intersections to build a
 living stream of the ideas that matter right now.
 

@@ -1,7 +1,7 @@
 # Operations Guide
 
 This guide covers production deployment, backups, monitoring, and recovery for
-self-hosted TagNote installations.
+TagNote installations.
 
 ## Production Architecture
 

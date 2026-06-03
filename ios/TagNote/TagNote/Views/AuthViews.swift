@@ -103,8 +103,8 @@ struct AuthView: View {
                     }
                     .font(.footnote)
 
-                    // Self-hosting / custom-server switching is a Debug-only
-                    // affordance; the shipped build is a tag-note.com client.
+                    // Custom-server switching is a Debug-only affordance; the
+                    // shipped build is a tag-note.com client.
                     if SessionStore.allowsCustomServer {
                         Button(role: .destructive) {
                             session.resetServer()

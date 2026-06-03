@@ -1,7 +1,7 @@
 # Contributing To TagNote
 
 Thank you for helping improve TagNote. This project aims to stay small,
-self-hostable, and easy to operate.
+fast, and easy to operate.
 
 ## Ways To Contribute
 

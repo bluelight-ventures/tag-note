@@ -50,7 +50,7 @@ struct ServerSetupView: View {
                     Text("TagNote")
                         .font(.largeTitle.weight(.semibold))
                         .foregroundStyle(appState.palette.text)
-                    Text("Connect to your self-hosted notes.")
+                    Text("Connect to your TagNote server.")
                         .foregroundStyle(appState.palette.secondaryText)
                 }
 

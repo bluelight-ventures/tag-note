@@ -7,8 +7,8 @@ the web app and keeps the product feel familiar: notes first, tag-driven
 filtering, Markdown editing, quiet autosave, and the same theme language.
 
 The first version should be an iPhone-focused app, not a universal iPad/Mac
-client. It should work against self-hosted TagNote instances by letting the
-user enter a server URL.
+client. It should work against a TagNote server by letting the user enter a
+server URL.
 
 ## Recommended Tech Stack
 
@@ -121,7 +121,7 @@ experience:
 
 ### MVP
 
-- Connect to a self-hosted server URL.
+- Connect to a TagNote server URL.
 - Login, register, forgot password, magic-link request, email verification
   pending state, and logout.
 - List notes with search, tag filters, pagination, and sort.
@@ -302,7 +302,7 @@ Full offline editing should be a later milestone with:
 - Store server URL in Keychain or protected app storage.
 - Require HTTPS for non-localhost servers by default.
 - Redact token values in logs.
-- Use App Transport Security defaults; document how self-hosters should serve
+- Use App Transport Security defaults; document how operators should serve
   the API over HTTPS.
 
 ## Implementation Plan
@@ -325,5 +325,5 @@ Full offline editing should be a later milestone with:
   behavior, while an iPhone app should probably start with server login.
 - Which Markdown editor quality bar is acceptable for v1: native `TextEditor`
   plus toolbar, or a richer editor using an embedded web editing component?
-- Should a self-hosted app be distributed only through TestFlight/App Store, or
+- Should the app be distributed only through TestFlight/App Store, or
   should we also support sideloading/developer builds for personal servers?
