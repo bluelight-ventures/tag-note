@@ -180,7 +180,8 @@ func main() {
 		return c.SendString("User-agent: *\n" +
 			"Allow: /\n" +
 			"Allow: /privacy\n" +
-			"Allow: /terms\n\n" +
+			"Allow: /terms\n" +
+			"Allow: /support\n\n" +
 			"Disallow: /app\n" +
 			"Disallow: /app/\n" +
 			"Disallow: /api/\n" +
@@ -211,6 +212,11 @@ func main() {
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>` + baseURL + `/support</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
 </urlset>`)
 	})
 
@@ -227,6 +233,16 @@ func main() {
 	// Terms of service
 	app.Get("/terms", func(c *fiber.Ctx) error {
 		file, err := web.Assets.ReadFile("terms.html")
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("page not found")
+		}
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return c.Send(file)
+	})
+
+	// Support / help (also the App Store Connect Support URL)
+	app.Get("/support", func(c *fiber.Ctx) error {
+		file, err := web.Assets.ReadFile("support.html")
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).SendString("page not found")
 		}

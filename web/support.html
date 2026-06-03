@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
-    <title>Privacy Policy — TagNote</title>
-    <meta name="description" content="TagNote privacy policy. How we handle your data, what we collect, and your rights.">
+    <title>Support — TagNote</title>
+    <meta name="description" content="Get help with TagNote. Contact support, learn how to manage your account, and find answers to common questions.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon-192.svg">
     <style>
@@ -97,10 +97,11 @@
             letter-spacing: -0.5px;
             margin-bottom: 8px;
         }
-        .content .last-updated {
-            font-size: 14px;
-            color: var(--text-muted);
+        .content .intro {
+            font-size: 16px;
+            color: var(--text-secondary);
             margin-bottom: 48px;
+            line-height: 1.7;
         }
         .content h2 {
             font-size: 22px;
@@ -114,7 +115,7 @@
             margin-bottom: 16px;
             line-height: 1.7;
         }
-        .content ul {
+        .content ul, .content ol {
             margin-bottom: 16px;
             padding-left: 24px;
         }
@@ -130,6 +131,17 @@
         }
         .content a:hover {
             color: var(--accent-hover);
+        }
+        .contact-card {
+            margin-top: 16px;
+            padding: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .contact-card .email {
+            font-size: 18px;
+            font-weight: 700;
         }
 
         /* ===== Footer ===== */
@@ -190,59 +202,44 @@
     </div>
 </nav>
 
-<!-- Privacy Policy -->
+<!-- Support -->
 <div class="content">
-    <h1>Privacy Policy</h1>
-    <p class="last-updated">Last updated: March 3, 2026</p>
+    <h1>Support</h1>
+    <p class="intro">Need help with TagNote? This page covers the most common questions and how to reach us. TagNote is a tag-first note-taking app available on the web and on iPhone and iPad.</p>
 
-    <p>TagNote ("we", "us", or "our") is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.</p>
+    <h2>Contact us</h2>
+    <p>The fastest way to get help is by email. We aim to respond within a few business days.</p>
+    <div class="contact-card">
+        <p class="email"><a href="mailto:support@tag-note.com">support@tag-note.com</a></p>
+        <p style="margin-bottom: 0;">Please include the device and app version (Settings shows the version) and a short description of the problem.</p>
+    </div>
 
-    <h2>1. Information We Collect</h2>
-    <p>We collect the minimum information necessary to provide the TagNote service:</p>
+    <h2>Getting started</h2>
     <ul>
-        <li><strong>Account information:</strong> Your email address, display name, and a securely hashed password when you register. If you sign in with Google, we receive your email, name, and Google account ID.</li>
-        <li><strong>Notes and tags:</strong> The content you create within TagNote, including notes, tags, and your organizational preferences.</li>
-        <li><strong>Uploaded images:</strong> Images you attach to your notes are stored on our servers.</li>
+        <li>Create an account with your email and a password, or sign in with Google on the web.</li>
+        <li>Write a note, then add tags to it. Tags are how you organize and find everything in TagNote.</li>
+        <li>Use search and tag filters to find any note instantly.</li>
+        <li>On iPhone and iPad, open the app and sign in to the same account to access your notes everywhere.</li>
     </ul>
 
-    <h2>2. How We Use Your Information</h2>
-    <p>We use your information solely to:</p>
-    <ul>
-        <li>Provide, maintain, and improve the TagNote service</li>
-        <li>Authenticate your identity and secure your account</li>
-        <li>Send account-related emails (verification, password reset) when applicable</li>
-    </ul>
-    <p>We do not use your data for advertising, profiling, or any purpose unrelated to providing the service.</p>
+    <h2>Managing your account</h2>
+    <p><strong>Reset your password.</strong> On the login screen choose "Forgot password?" and follow the email instructions. You can also use "Login without password" to receive a magic sign-in link.</p>
+    <p><strong>Export your data.</strong> You can export all of your notes, tags, and settings at any time from the app.</p>
+    <p><strong>Delete your account.</strong> To permanently delete your account and all associated notes, tags, and settings:</p>
+    <ol>
+        <li>Open the TagNote app and go to <strong>Settings</strong>.</li>
+        <li>Tap <strong>Delete account</strong>.</li>
+        <li>Confirm. This is immediate and cannot be undone.</li>
+    </ol>
+    <p>If you cannot access the app, email us at the address above and we will delete your account for you.</p>
 
-    <h2>3. Data Storage and Security</h2>
-    <p>Your data is stored in a SQLite database on our server. We take reasonable measures to protect your information, including:</p>
-    <ul>
-        <li>Passwords are hashed using bcrypt and never stored in plain text</li>
-        <li>All connections are encrypted with HTTPS/TLS</li>
-        <li>Authentication uses signed JWT tokens</li>
-        <li>The server is hardened with firewall rules, SSH key authentication, and automatic security updates</li>
-    </ul>
+    <h2>Common questions</h2>
+    <p><strong>Is my data private?</strong> Yes. Your notes and tags are private to your account and are never sold or shared. See our <a href="/privacy">Privacy Policy</a> for details.</p>
+    <p><strong>Can I self-host TagNote?</strong> Yes. TagNote is self-hostable, and the app lets you connect to your own server by changing the server URL on the first screen.</p>
+    <p><strong>I found a bug or have a feature request.</strong> Email us at <a href="mailto:support@tag-note.com">support@tag-note.com</a> with the details and we will take a look.</p>
 
-    <h2>4. Data Sharing</h2>
-    <p>We do not sell, rent, or share your personal information with third parties. Your notes and tags are private to your account. Uploaded image URLs are link-private: anyone who obtains a specific image URL can fetch that image. We may disclose information only if required by law.</p>
-
-    <h2>5. Cookies and Tracking</h2>
-    <p>TagNote does not use cookies for tracking or analytics. We store your authentication token and theme preference in your browser's local storage to keep you logged in and remember your settings.</p>
-
-    <h2>6. Data Export and Deletion</h2>
-    <p>You can export all your data (notes, tags, and settings) at any time using the export feature in the app. If you wish to delete your account and all associated data, please contact us at the email below.</p>
-
-    <h2>7. Third-Party Services</h2>
-    <p>If you choose to sign in with Google, Google's privacy policy applies to the authentication process. We only receive your basic profile information (email, name, account ID) and do not access any other Google data.</p>
-
-    <h2>8. Children's Privacy</h2>
-    <p>TagNote is not directed at children under 13 years of age. We do not knowingly collect personal information from children under 13.</p>
-
-    <h2>9. Changes to This Policy</h2>
-    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated "last updated" date. Continued use of TagNote after changes constitutes acceptance of the updated policy.</p>
-
-    <h2>10. Contact</h2>
-    <p>If you have questions about this privacy policy or your data, contact the maintainers through the repository where this instance was deployed from.</p>
+    <h2>Legal</h2>
+    <p>See our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Service</a>.</p>
 </div>
 
 <!-- Footer -->
