@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS base
+FROM golang:1.26.4-alpine AS base
 
 RUN apk add --no-cache git rsvg-convert
 
@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . .
 
-FROM golang:1.26-alpine AS test-tools
+FROM golang:1.26.4-alpine AS test-tools
 
 ARG GOVULNCHECK_VERSION=v1.3.0
 RUN go install golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}

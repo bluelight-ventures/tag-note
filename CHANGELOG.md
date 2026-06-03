@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.1] - 2026-06-03
+
+### Added
+
+- Added a public `/support` page for App Store Connect, including contact,
+  getting-started, account deletion, and FAQ guidance.
+- Added App Store screenshot capture coverage for the iOS app's notes, search,
+  tags, and editor surfaces.
+
+### Changed
+
+- Made App Store iOS builds use the hosted `tag-note.com` instance directly,
+  while keeping custom server configuration available in Debug builds.
+- Updated product copy and documentation to remove self-hosted wording from the
+  shipped TagNote experience.
+- Hardened the iOS E2E suite for App Store screenshot generation across iPhone
+  and iPad destinations.
+
+### Fixed
+
+- Updated the Dockerized Go build/test base image to Go 1.26.4 to pick up
+  standard-library vulnerability fixes reported by `govulncheck`.
+- Removed the alpha channel from the iOS marketing icon so App Store Connect
+  accepts the asset.
+- Added deterministic iOS coverage for compact drawer and regular-width
+  persistent sidebar layouts.
+
+---
+
 ## [1.6.0] - 2026-06-02
 
 ### Added
@@ -299,7 +328,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/runminglu/tag-note/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/runminglu/tag-note/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/runminglu/tag-note/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/runminglu/tag-note/compare/v1.4.0...v1.4.1
