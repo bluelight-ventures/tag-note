@@ -59,7 +59,12 @@ selects the first available iPhone simulator:
 ios/TagNote/scripts/test-ios.sh unit
 ```
 
-E2E UI tests need the Docker backend running and test credentials configured:
+E2E UI tests need the Docker backend running and test credentials configured.
+The backend **must** run with `TAGNOTE_TEST_MODE=1`: it creates the test account
+and relaxes the auth rate limiter, which the suite would otherwise trip (it
+performs several logins). The UI suite also runs on an iPhone (compact,
+slide-over drawer) and an iPad (regular, persistent sidebar) by default to cover
+both adaptive layouts.
 
 ```bash
 TAGNOTE_TEST_MODE=1 docker compose up -d
@@ -69,6 +74,16 @@ TAGNOTE_E2E_EMAIL=test@test.com \
 TAGNOTE_E2E_PASSWORD=testpass123 \
 ios/TagNote/scripts/test-ios.sh e2e
 ```
+
+The script forwards these `TAGNOTE_E2E_*` variables to the on-simulator test
+runner via the `TEST_RUNNER_` prefix that `xcodebuild` requires; setting them
+when invoking `xcodebuild` directly (without that prefix) has no effect, and the
+suite falls back to the `http://localhost:3777` default.
+
+App Store screenshots are produced by `testScreenshotsForAppStoreListing`,
+attached to the result bundle (`-resultBundlePath`) with `.keepAlways`. Running
+the suite on both an iPhone and an iPad yields both required screenshot sets;
+export them with `xcrun xcresulttool export attachments`.
 
 If you are running the backend on a remote server, expose it through an SSH
 tunnel first:

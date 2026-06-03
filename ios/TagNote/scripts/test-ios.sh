@@ -80,20 +80,43 @@ pick_destinations() {
   fi
 }
 
-cmd=(
-  xcodebuild test
-  -project "$PROJECT"
-  -scheme "$SCHEME"
-)
+# Forward the E2E configuration to the on-simulator test runner. xcodebuild only
+# propagates host env vars prefixed with TEST_RUNNER_ into the test process, so a
+# bare TAGNOTE_E2E_SERVER_URL set by the caller would otherwise be ignored and
+# the suite would silently fall back to the http://localhost:3777 default.
+for e2e_var in TAGNOTE_E2E_SERVER_URL TAGNOTE_E2E_EMAIL TAGNOTE_E2E_PASSWORD; do
+  if [[ -n "${(P)e2e_var:-}" ]]; then
+    export "TEST_RUNNER_${e2e_var}=${(P)e2e_var}"
+  fi
+done
 
+# Run each destination in its own xcodebuild invocation (sequentially) rather
+# than passing several -destination flags to one invocation. Parallel
+# destinations share the host and the same backend IP, so simultaneous
+# simulators contend for resources and burst the auth rate limiter; running them
+# one at a time keeps the UI suite deterministic.
+typeset -a destinations
 while IFS= read -r destination; do
   [[ -z "$destination" ]] && continue
-  echo "Using destination: $destination"
-  cmd+=(-destination "$destination")
+  destinations+=("$destination")
 done < <(pick_destinations)
 
-if [[ -n "$ONLY_TESTING" ]]; then
-  cmd+=("-only-testing:$ONLY_TESTING")
-fi
+overall_rc=0
+for destination in "${destinations[@]}"; do
+  echo "==> Testing on: $destination"
+  cmd=(
+    xcodebuild test
+    -project "$PROJECT"
+    -scheme "$SCHEME"
+    -destination "$destination"
+  )
+  if [[ -n "$ONLY_TESTING" ]]; then
+    cmd+=("-only-testing:$ONLY_TESTING")
+  fi
+  if ! "${cmd[@]}"; then
+    overall_rc=1
+    echo "FAILED on destination: $destination" >&2
+  fi
+done
 
-"${cmd[@]}"
+exit $overall_rc

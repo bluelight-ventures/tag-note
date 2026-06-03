@@ -33,7 +33,10 @@ struct RootView: View {
 struct ServerSetupView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
-    @State private var serverURL = SessionStore.defaultServerURL
+    // Pre-fill the default hosted server for real users, but start empty under UI
+    // testing so the E2E suite types its own server URL into a clean field
+    // (otherwise a residual pre-fill can point the app at production).
+    @State private var serverURL = ProcessInfo.processInfo.arguments.contains("-ui-testing") ? "" : SessionStore.defaultServerURL
     @State private var errorMessage: String?
 
     var body: some View {
