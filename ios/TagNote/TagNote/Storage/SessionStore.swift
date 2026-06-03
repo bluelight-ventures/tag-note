@@ -9,9 +9,20 @@ final class SessionStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var isLoading = false
 
-    /// Default hosted instance, pre-filled on the server-setup screen so the
-    /// app works out of the box (and App Review can sign in without setup).
+    /// Default hosted instance. Release builds always use this; Debug builds
+    /// pre-fill it on the server-setup screen but allow overriding it.
     static let defaultServerURL = "https://tag-note.com"
+
+    /// Whether the user may point the app at a custom/self-hosted server.
+    /// Only Debug builds (local development and the E2E suite) expose this;
+    /// the shipped App Store build is a tag-note.com-only client.
+    static var allowsCustomServer: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
 
     let api: TagNoteAPI
     let cache: LocalCache
@@ -26,8 +37,13 @@ final class SessionStore: ObservableObject {
             KeychainStore.delete(Keys.serverURL)
             KeychainStore.delete(Keys.token)
         }
-        if let rawURL = KeychainStore.read(Keys.serverURL) {
-            self.serverURL = URL(string: rawURL)
+        if Self.allowsCustomServer {
+            if let rawURL = KeychainStore.read(Keys.serverURL) {
+                self.serverURL = URL(string: rawURL)
+            }
+        } else {
+            // Release: always the hosted server. Never show the setup screen.
+            self.serverURL = URL(string: Self.defaultServerURL)
         }
         self.token = KeychainStore.read(Keys.token)
         api.configure(serverURL: serverURL, token: token)

@@ -103,13 +103,17 @@ struct AuthView: View {
                     }
                     .font(.footnote)
 
-                    Button(role: .destructive) {
-                        session.resetServer()
-                    } label: {
-                        Text("Change server")
+                    // Self-hosting / custom-server switching is a Debug-only
+                    // affordance; the shipped build is a tag-note.com client.
+                    if SessionStore.allowsCustomServer {
+                        Button(role: .destructive) {
+                            session.resetServer()
+                        } label: {
+                            Text("Change server")
+                        }
+                        .font(.footnote)
+                        .padding(.top, 8)
                     }
-                    .font(.footnote)
-                    .padding(.top, 8)
                 }
                 .padding(20)
             }
