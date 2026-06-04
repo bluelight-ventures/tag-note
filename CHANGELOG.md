@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.2] - 2026-06-04
+
+### Added
+
+- Added Sign in with Apple on iOS, backed by a new `/auth/apple` endpoint that
+  verifies Apple identity tokens (JWKS signature, issuer, audience, and nonce)
+  and links or creates accounts by Apple ID, then email.
+- Added Sign in with Google on iOS using the official Google-branded button.
+- Added a `© Bluelight Inc.` copyright notice and a `support@bluelight.ventures`
+  contact across the public landing, privacy, terms, and support pages.
+
+### Changed
+
+- The Google login endpoint now accepts multiple client-ID audiences via a
+  comma-separated `GOOGLE_CLIENT_ID`, so native iOS tokens are validated
+  alongside the web client.
+- Named Bluelight Inc. as the operator of TagNote in the Privacy Policy and
+  Terms of Service.
+- Restyled the privacy, terms, and support pages to share the landing page's
+  palette and branding.
+- Passed `APPLE_CLIENT_ID` through to the production container configuration.
+
+### Fixed
+
+- Aligned the Google sign-in button with the Apple button on the iOS auth
+  screen for a consistent layout.
+
+---
+
 ## [1.6.1] - 2026-06-03
 
 ### Added
@@ -328,7 +357,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/runminglu/tag-note/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/runminglu/tag-note/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/runminglu/tag-note/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/runminglu/tag-note/compare/v1.4.1...v1.5.0
