@@ -34,6 +34,37 @@ func TestGoogleTokenInfoIsEmailVerified(t *testing.T) {
 	}
 }
 
+func TestSplitClientIDsAndMembership(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want []string
+	}{
+		{raw: "", want: nil},
+		{raw: "web-id", want: []string{"web-id"}},
+		{raw: "web-id,ios-id", want: []string{"web-id", "ios-id"}},
+		{raw: " web-id , ios-id , ", want: []string{"web-id", "ios-id"}},
+	}
+	for _, tc := range cases {
+		got := splitClientIDs(tc.raw)
+		if len(got) != len(tc.want) {
+			t.Fatalf("splitClientIDs(%q) = %v, want %v", tc.raw, got, tc.want)
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Fatalf("splitClientIDs(%q) = %v, want %v", tc.raw, got, tc.want)
+			}
+		}
+	}
+
+	ids := splitClientIDs("web-id,ios-id")
+	if !containsString(ids, "ios-id") || !containsString(ids, "web-id") {
+		t.Fatalf("containsString should match both configured audiences")
+	}
+	if containsString(ids, "attacker-id") {
+		t.Fatalf("containsString should reject an unknown audience")
+	}
+}
+
 func TestDeleteAccountRemovesUploadFiles(t *testing.T) {
 	t.Setenv("TAGNOTE_ALLOW_DEV_SECRET", "1")
 

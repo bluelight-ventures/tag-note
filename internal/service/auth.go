@@ -33,13 +33,13 @@ var (
 
 // AuthService handles user registration, login, and JWT tokens.
 type AuthService struct {
-	repo           repo.Repository
-	jwtSecret      []byte
-	emailService   *EmailService
-	googleClientID string
-	appleClientID  string
-	appleKeys      *appleKeySet
-	uploadDir      string
+	repo            repo.Repository
+	jwtSecret       []byte
+	emailService    *EmailService
+	googleClientIDs []string
+	appleClientID   string
+	appleKeys       *appleKeySet
+	uploadDir       string
 }
 
 // NewAuth creates a new AuthService. uploadDir is the filesystem directory used
@@ -54,13 +54,13 @@ func NewAuth(r repo.Repository, emailService *EmailService, uploadDir string) (*
 		}
 	}
 	return &AuthService{
-		repo:           r,
-		jwtSecret:      []byte(secret),
-		emailService:   emailService,
-		googleClientID: os.Getenv("GOOGLE_CLIENT_ID"),
-		appleClientID:  os.Getenv("APPLE_CLIENT_ID"),
-		appleKeys:      newAppleKeySet(appleJWKSURL),
-		uploadDir:      uploadDir,
+		repo:            r,
+		jwtSecret:       []byte(secret),
+		emailService:    emailService,
+		googleClientIDs: splitClientIDs(os.Getenv("GOOGLE_CLIENT_ID")),
+		appleClientID:   os.Getenv("APPLE_CLIENT_ID"),
+		appleKeys:       newAppleKeySet(appleJWKSURL),
+		uploadDir:       uploadDir,
 	}, nil
 }
 
@@ -247,7 +247,7 @@ func (a *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model
 
 // GoogleLogin handles Google OAuth authentication.
 func (a *AuthService) GoogleLogin(ctx context.Context, req model.GoogleAuthRequest) (*model.AuthResponse, error) {
-	if a.googleClientID == "" {
+	if len(a.googleClientIDs) == 0 {
 		return nil, fmt.Errorf("Google login is not configured")
 	}
 
@@ -348,8 +348,8 @@ func (a *AuthService) verifyGoogleToken(idToken string) (*googleTokenInfo, error
 		return nil, err
 	}
 
-	// Verify the audience matches our client ID (if configured)
-	if a.googleClientID != "" && info.Aud != a.googleClientID {
+	// Verify the audience matches one of our client IDs (web, iOS, ...).
+	if len(a.googleClientIDs) > 0 && !containsString(a.googleClientIDs, info.Aud) {
 		return nil, fmt.Errorf("token audience mismatch")
 	}
 
@@ -637,6 +637,27 @@ func (a *AuthService) generateToken(userID, email string) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(a.jwtSecret)
+}
+
+// splitClientIDs parses a comma-separated list of OAuth client IDs (allowing
+// multiple accepted audiences, e.g. web and iOS), dropping blanks.
+func splitClientIDs(raw string) []string {
+	var ids []string
+	for _, part := range strings.Split(raw, ",") {
+		if id := strings.TrimSpace(part); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func containsString(values []string, target string) bool {
+	for _, v := range values {
+		if v == target {
+			return true
+		}
+	}
+	return false
 }
 
 // constantTimeCompare performs a constant-time comparison of two strings.
