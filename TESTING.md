@@ -116,6 +116,8 @@ docker run -d --rm \
   -e ADMIN_EMAIL=test@test.com \
   -e OPERATIONAL_BEARER_TOKEN=e2e-operational-token \
   -e GOOGLE_CLIENT_ID=web-e2e.apps.googleusercontent.com,ios-e2e.apps.googleusercontent.com \
+  -e APPLE_CLIENT_ID=com.tag-note.tagnote,com.tag-note.web-e2e \
+  -e APPLE_WEB_CLIENT_ID=com.tag-note.web-e2e \
   tag-note:e2e
 ```
 
@@ -175,6 +177,8 @@ ssh "$E2E_HOST" "docker run -d --rm \
   -e ADMIN_EMAIL=test@test.com \
   -e OPERATIONAL_BEARER_TOKEN=e2e-operational-token \
   -e GOOGLE_CLIENT_ID=web-e2e.apps.googleusercontent.com,ios-e2e.apps.googleusercontent.com \
+  -e APPLE_CLIENT_ID=com.tag-note.tagnote,com.tag-note.web-e2e \
+  -e APPLE_WEB_CLIENT_ID=com.tag-note.web-e2e \
   tag-note:e2e"
 
 ssh "$E2E_HOST" "for i in \$(seq 1 30); do \

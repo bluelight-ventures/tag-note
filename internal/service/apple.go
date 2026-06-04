@@ -149,7 +149,6 @@ func (a *AuthService) verifyAppleToken(identityToken, expectedNonce string) (*ap
 	claims := jwt.MapClaims{}
 	parser := jwt.NewParser(
 		jwt.WithIssuer(appleIssuer),
-		jwt.WithAudience(a.appleClientID),
 		jwt.WithValidMethods([]string{"RS256"}),
 	)
 	_, err := parser.ParseWithClaims(identityToken, claims, func(t *jwt.Token) (interface{}, error) {
@@ -161,6 +160,12 @@ func (a *AuthService) verifyAppleToken(identityToken, expectedNonce string) (*ap
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// The token audience must be one of our configured client IDs (the native
+	// app bundle id and/or the web Services ID).
+	if !appleAudienceMatches(claims["aud"], a.appleClientIDs) {
+		return nil, fmt.Errorf("apple: token audience mismatch")
 	}
 
 	sub, _ := claims["sub"].(string)
@@ -184,11 +189,27 @@ func sha256Hex(s string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// appleAudienceMatches reports whether the token's aud claim (a string, or an
+// array of strings) contains any of the allowed client IDs.
+func appleAudienceMatches(aud interface{}, allowed []string) bool {
+	switch v := aud.(type) {
+	case string:
+		return containsString(allowed, v)
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && containsString(allowed, s) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // AppleLogin handles Sign in with Apple authentication, mirroring GoogleLogin:
 // find by stable Apple subject, else link an existing account by email, else
 // create a new account.
 func (a *AuthService) AppleLogin(ctx context.Context, req model.AppleAuthRequest) (*model.AuthResponse, error) {
-	if a.appleClientID == "" {
+	if len(a.appleClientIDs) == 0 {
 		return nil, fmt.Errorf("Apple login is not configured")
 	}
 

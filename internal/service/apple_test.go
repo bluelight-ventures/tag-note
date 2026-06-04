@@ -24,7 +24,7 @@ func newAppleTestService(t *testing.T, kid string, pub *rsa.PublicKey, r repo.Re
 	if err != nil {
 		t.Fatalf("NewAuth() error = %v", err)
 	}
-	auth.appleClientID = testAppleAud
+	auth.appleClientIDs = []string{testAppleAud}
 	auth.appleKeys = &appleKeySet{
 		keys:    map[string]*rsa.PublicKey{kid: pub},
 		fetched: time.Now(),
@@ -121,6 +121,36 @@ func TestVerifyAppleToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyAppleTokenMultiAudience(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+	const kid = "test-kid"
+	const webAud = "com.tag-note.web"
+	auth := newAppleTestService(t, kid, &key.PublicKey, nil)
+	// Accept both the native bundle id and the web Services ID.
+	auth.appleClientIDs = []string{testAppleAud, webAud}
+
+	t.Run("web services id accepted", func(t *testing.T) {
+		claims := validAppleClaims()
+		claims["aud"] = webAud
+		token := mintAppleToken(t, key, kid, claims)
+		if _, err := auth.verifyAppleToken(token, "raw-nonce-123"); err != nil {
+			t.Fatalf("web-audience token should be accepted: %v", err)
+		}
+	})
+
+	t.Run("unconfigured audience rejected", func(t *testing.T) {
+		claims := validAppleClaims()
+		claims["aud"] = "com.someone.else"
+		token := mintAppleToken(t, key, kid, claims)
+		if _, err := auth.verifyAppleToken(token, "raw-nonce-123"); err == nil {
+			t.Fatal("unknown-audience token should be rejected")
+		}
+	})
 }
 
 func TestAppleLoginCreatesLinksAndReturns(t *testing.T) {

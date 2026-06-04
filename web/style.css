@@ -797,6 +797,24 @@ body {
     flex-shrink: 0;
 }
 
+.btn-apple {
+    background: #000;
+    border: 1px solid #000;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-apple:hover {
+    background: #1a1a1a;
+}
+
+.btn-apple svg {
+    flex-shrink: 0;
+}
+
 /* Auth Verify Pending View */
 .auth-verify-icon {
     font-size: 48px;

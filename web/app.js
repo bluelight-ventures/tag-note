@@ -1502,6 +1502,99 @@ function hideGoogleButton() {
     if (divider) divider.style.display = 'none';
 }
 
+// --- Apple ID Token Handler ---
+async function handleAppleAuthResponse(idToken, fullName) {
+    try {
+        const body = { identity_token: idToken };
+        if (fullName) body.full_name = fullName;
+        const resp = await fetch(API + '/auth/apple', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            showAuthError(data.error || 'Apple login failed');
+            return;
+        }
+        setToken(data.token);
+        setUser(data.user);
+        showAppContent();
+        await migrateGuestNotes();
+        loadTags();
+        updateBadge();
+        loadFeed();
+    } catch (e) {
+        showAuthError('Apple login failed: ' + e.message);
+    }
+}
+
+// --- Initialize Sign in with Apple ---
+function initAppleSignIn() {
+    const appleClientId = window.APPLE_CLIENT_ID;
+    const appleBtn = document.getElementById('apple-signin-btn');
+    if (!appleClientId || !appleBtn) {
+        if (appleBtn) appleBtn.style.display = 'none';
+        return;
+    }
+
+    // The divider may have been hidden by hideGoogleButton(); show it again
+    // since we have at least one social sign-in option.
+    const divider = document.querySelector('.auth-divider');
+    if (divider) divider.style.display = '';
+
+    function configure() {
+        if (typeof AppleID === 'undefined' || !AppleID.auth) return false;
+        AppleID.auth.init({
+            clientId: appleClientId,
+            scope: 'name email',
+            redirectURI: window.APPLE_REDIRECT_URI || (window.location.origin + '/app'),
+            usePopup: true
+        });
+        return true;
+    }
+
+    if (!configure()) {
+        // The Apple SDK loads async; poll briefly for it.
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+            attempts++;
+            if (configure()) {
+                clearInterval(checkInterval);
+            } else if (attempts >= 50) {
+                clearInterval(checkInterval);
+                console.warn('Sign in with Apple library failed to load');
+                appleBtn.style.display = 'none';
+            }
+        }, 100);
+    }
+
+    appleBtn.addEventListener('click', async () => {
+        if (typeof AppleID === 'undefined' || !AppleID.auth) {
+            showAuthError('Sign in with Apple is not available. Please use email/password.');
+            return;
+        }
+        try {
+            const data = await AppleID.auth.signIn();
+            const idToken = data && data.authorization && data.authorization.id_token;
+            if (!idToken) {
+                showAuthError('Apple login failed');
+                return;
+            }
+            // Apple only returns the name on the first authorization.
+            let fullName = '';
+            if (data.user && data.user.name) {
+                fullName = [data.user.name.firstName, data.user.name.lastName].filter(Boolean).join(' ');
+            }
+            await handleAppleAuthResponse(idToken, fullName);
+        } catch (e) {
+            // Ignore user-cancelled popups.
+            if (e && (e.error === 'popup_closed_by_user' || e.error === 'user_cancelled_authorize')) return;
+            showAuthError('Apple login failed');
+        }
+    });
+}
+
 // --- Handle URL Parameters for Auth ---
 function handleAuthUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -4055,6 +4148,7 @@ function closeMobileSidebar() {
 // --- Init ---
 initTheme();
 initGoogleSignIn();
+initAppleSignIn();
 initGuestModeHandlers();
 
 // --- Guest Note Migration ---

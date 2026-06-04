@@ -37,7 +37,7 @@ type AuthService struct {
 	jwtSecret       []byte
 	emailService    *EmailService
 	googleClientIDs []string
-	appleClientID   string
+	appleClientIDs  []string
 	appleKeys       *appleKeySet
 	uploadDir       string
 }
@@ -58,7 +58,7 @@ func NewAuth(r repo.Repository, emailService *EmailService, uploadDir string) (*
 		jwtSecret:       []byte(secret),
 		emailService:    emailService,
 		googleClientIDs: splitClientIDs(os.Getenv("GOOGLE_CLIENT_ID")),
-		appleClientID:   os.Getenv("APPLE_CLIENT_ID"),
+		appleClientIDs:  splitClientIDs(os.Getenv("APPLE_CLIENT_ID")),
 		appleKeys:       newAppleKeySet(appleJWKSURL),
 		uploadDir:       uploadDir,
 	}, nil

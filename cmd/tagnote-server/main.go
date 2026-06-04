@@ -240,6 +240,17 @@ func main() {
 		return c.Send(file)
 	})
 
+	// Sign in with Apple domain association (used to verify the web Services ID's
+	// domain in the Apple Developer portal). Content comes from the env var.
+	app.Get("/.well-known/apple-developer-domain-association.txt", func(c *fiber.Ctx) error {
+		content := os.Getenv("APPLE_DOMAIN_ASSOCIATION")
+		if content == "" {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		c.Set("Content-Type", "text/plain; charset=utf-8")
+		return c.SendString(content)
+	})
+
 	// Support / help (also the App Store Connect Support URL)
 	app.Get("/support", func(c *fiber.Ctx) error {
 		file, err := web.Assets.ReadFile("support.html")
@@ -271,6 +282,18 @@ func main() {
 			// Also add Google Identity Services library
 			gsiScript := `<script src="https://accounts.google.com/gsi/client" async defer></script>`
 			html = strings.Replace(html, "</head>", configScript+gsiScript+"</head>", 1)
+		}
+
+		// Inject Sign in with Apple (web) config if a Services ID is configured.
+		appleClientID := strings.TrimSpace(os.Getenv("APPLE_WEB_CLIENT_ID"))
+		if appleClientID != "" {
+			appleRedirect := strings.TrimSpace(os.Getenv("APPLE_WEB_REDIRECT_URI"))
+			if appleRedirect == "" {
+				appleRedirect = publicBaseURL()
+			}
+			appleConfig := fmt.Sprintf(`<script>window.APPLE_CLIENT_ID="%s";window.APPLE_REDIRECT_URI="%s";</script>`, appleClientID, appleRedirect)
+			appleSDK := `<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>`
+			html = strings.Replace(html, "</head>", appleConfig+appleSDK+"</head>", 1)
 		}
 
 		c.Set("Content-Type", "text/html; charset=utf-8")

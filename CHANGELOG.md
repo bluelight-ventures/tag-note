@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added Sign in with Apple to the web app, so accounts created via Apple on iOS
+  can log in from any browser or non-Apple device. The web flow uses Apple's JS
+  SDK (popup) and the existing `/auth/apple` endpoint, plus a
+  `/.well-known/apple-developer-domain-association.txt` route for Services ID
+  domain verification.
+
+### Changed
+
+- `APPLE_CLIENT_ID` now accepts a comma-separated list of accepted token
+  audiences (the native app bundle id and the web Services ID), mirroring
+  `GOOGLE_CLIENT_ID`.
+
 ---
 
 ## [1.6.3] - 2026-06-04
