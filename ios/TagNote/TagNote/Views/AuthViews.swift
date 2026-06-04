@@ -1,6 +1,7 @@
 import AuthenticationServices
 import CryptoKit
 import GoogleSignIn
+import GoogleSignInSwift
 import SwiftUI
 import UIKit
 
@@ -130,14 +131,13 @@ struct AuthView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .accessibilityIdentifier("apple-signin-button")
 
-                    Button(action: handleGoogleSignIn) {
-                        Text("Continue with Google")
-                            .font(.body.weight(.medium))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(appState.palette.text)
+                    // Official Google-branded button (Google brand guidelines).
+                    GoogleSignInButton(
+                        scheme: appState.palette.isDark ? .dark : .light,
+                        style: .wide,
+                        action: handleGoogleSignIn
+                    )
+                    .frame(height: 48)
                     .accessibilityIdentifier("google-signin-button")
 
                     // Custom-server switching is a Debug-only affordance; the

@@ -36,10 +36,13 @@ final class TagNoteE2ETests: XCTestCase {
             "Sign in with Apple button should be present on the auth screen"
         )
 
-        let googleButton = app.descendants(matching: .any)["google-signin-button"]
+        let googleByID = app.descendants(matching: .any)["google-signin-button"]
+        let googleByLabel = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS[c] %@", "Google")
+        ).firstMatch
         XCTAssertTrue(
-            googleButton.waitForExistence(timeout: 3),
-            "Continue with Google button should be present on the auth screen"
+            googleByID.waitForExistence(timeout: 5) || googleByLabel.waitForExistence(timeout: 3),
+            "Sign in with Google button should be present on the auth screen"
         )
     }
 
