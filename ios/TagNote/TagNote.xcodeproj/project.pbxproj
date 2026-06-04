@@ -35,7 +35,6 @@
 		8A000001000000000000001A /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000120 /* Markdown */; };
 		8A000001000000000000001B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011A /* PrivacyInfo.xcprivacy */; };
 		8A000001000000000000001C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000140 /* GoogleSignIn */; };
-		8A000001000000000000001D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000142 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -95,7 +94,6 @@
 			files = (
 				8A000001000000000000001A /* Markdown in Frameworks */,
 				8A000001000000000000001C /* GoogleSignIn in Frameworks */,
-				8A000001000000000000001D /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,7 +241,6 @@
 			packageProductDependencies = (
 				8A0000010000000000000120 /* Markdown */,
 				8A0000010000000000000140 /* GoogleSignIn */,
-				8A0000010000000000000142 /* GoogleSignInSwift */,
 			);
 			productName = TagNote;
 			productReference = 8A0000010000000000000020 /* TagNote.app */;
@@ -715,11 +712,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8A0000010000000000000141 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
-		};
-		8A0000010000000000000142 /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 8A0000010000000000000141 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

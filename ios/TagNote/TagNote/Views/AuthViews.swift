@@ -1,7 +1,6 @@
 import AuthenticationServices
 import CryptoKit
 import GoogleSignIn
-import GoogleSignInSwift
 import SwiftUI
 import UIKit
 
@@ -131,13 +130,27 @@ struct AuthView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .accessibilityIdentifier("apple-signin-button")
 
-                    // Official Google-branded button (Google brand guidelines).
-                    GoogleSignInButton(
-                        scheme: appState.palette.isDark ? .dark : .light,
-                        style: .wide,
-                        action: handleGoogleSignIn
-                    )
-                    .frame(height: 48)
+                    // Google-branded button: official "G" logo + approved label,
+                    // centered to match the Apple button above (Google brand
+                    // guidelines for a custom button).
+                    Button(action: handleGoogleSignIn) {
+                        HStack(spacing: 10) {
+                            Image("GoogleLogo")
+                                .resizable()
+                                .frame(width: 18, height: 18)
+                            Text("Sign in with Google")
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundStyle(googleTextColor)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(googleBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(googleBorderColor, lineWidth: 1)
+                        )
+                    }
                     .accessibilityIdentifier("google-signin-button")
 
                     // Custom-server switching is a Debug-only affordance; the
@@ -191,6 +204,17 @@ struct AuthView: View {
             }
             session.errorMessage = "Apple sign-in failed."
         }
+    }
+
+    // Google brand colors for the custom button (light / dark schemes).
+    private var googleBackgroundColor: Color {
+        appState.palette.isDark ? Color(red: 19 / 255, green: 19 / 255, blue: 20 / 255) : .white
+    }
+    private var googleTextColor: Color {
+        appState.palette.isDark ? Color(red: 227 / 255, green: 227 / 255, blue: 227 / 255) : Color(red: 31 / 255, green: 31 / 255, blue: 31 / 255)
+    }
+    private var googleBorderColor: Color {
+        appState.palette.isDark ? Color(red: 142 / 255, green: 145 / 255, blue: 143 / 255) : Color(red: 116 / 255, green: 119 / 255, blue: 117 / 255)
     }
 
     private func handleGoogleSignIn() {
