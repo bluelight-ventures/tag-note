@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.3] - 2026-06-04
+
+### Fixed
+
+- Fixed Google sign-in on the web app. When `GOOGLE_CLIENT_ID` is a
+  comma-separated list of accepted token audiences (web, iOS), the browser is
+  now initialized with only the first (web) client ID; previously the whole
+  list was injected, which Google rejected with `invalid_client`.
+
+### Changed
+
+- Added regression coverage for the web Google client-ID injection (a Go unit
+  test plus a Playwright e2e check), and configured the CI/e2e server with a
+  multi-audience `GOOGLE_CLIENT_ID`.
+
+---
+
 ## [1.6.2] - 2026-06-04
 
 ### Added
@@ -357,7 +374,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.2...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/runminglu/tag-note/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/runminglu/tag-note/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/runminglu/tag-note/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/runminglu/tag-note/compare/v1.5.0...v1.6.0

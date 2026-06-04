@@ -262,8 +262,8 @@ func main() {
 			return c.Status(fiber.StatusInternalServerError).SendString("app not found")
 		}
 
-		// Inject Google Client ID into the HTML if configured
-		googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+		// Inject Google Client ID into the HTML if configured.
+		googleClientID := webGoogleClientID(os.Getenv("GOOGLE_CLIENT_ID"))
 		html := string(file)
 		if googleClientID != "" {
 			// Inject script tag before </head> to set GOOGLE_CLIENT_ID
@@ -316,6 +316,18 @@ func main() {
 	}
 
 	fmt.Println("Server stopped")
+}
+
+// webGoogleClientID returns the client ID used to initialize Google Sign-In in
+// the browser. GOOGLE_CLIENT_ID may be a comma-separated list of accepted token
+// audiences (web, iOS, ...) for backend verification; the browser must use a
+// single, valid client ID — the web client, which is the first entry. Injecting
+// the whole list makes Google reject it with "invalid_client".
+func webGoogleClientID(raw string) string {
+	if i := strings.IndexByte(raw, ','); i >= 0 {
+		raw = raw[:i]
+	}
+	return strings.TrimSpace(raw)
 }
 
 func publicBaseURL() string {

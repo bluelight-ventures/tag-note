@@ -282,6 +282,25 @@ test('admin jwt can access operational status', async ({ request }) => {
   await expect(statusResponse).toBeOK();
 });
 
+test('app page injects only the web Google client ID, not the audience list', async ({ request }) => {
+  // GOOGLE_CLIENT_ID may be a comma-separated list of accepted token audiences
+  // (web, iOS, ...) for backend verification. The browser must be initialized
+  // with a single, valid client ID (the web one) — injecting the whole list
+  // makes Google reject sign-in with "invalid_client". (Regression guard.)
+  const res = await request.get('/app');
+  expect(res.ok()).toBeTruthy();
+  const html = await res.text();
+
+  const match = html.match(/window\.GOOGLE_CLIENT_ID\s*=\s*"([^"]*)"/);
+  test.skip(!match, 'Google Sign-In is not configured on this server');
+
+  const clientId = match![1];
+  expect(clientId).not.toContain(',');
+  expect(clientId).toMatch(/\.apps\.googleusercontent\.com$/);
+  // The CI e2e server is configured with web-e2e,... so the web id is first.
+  expect(clientId).toBe('web-e2e.apps.googleusercontent.com');
+});
+
 test('admin dashboard displays protected metrics', async ({ page, request }) => {
   const token = await getAdminToken(request);
 

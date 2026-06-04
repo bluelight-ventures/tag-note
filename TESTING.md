@@ -115,6 +115,7 @@ docker run -d --rm \
   -e TAGNOTE_TEST_MODE=1 \
   -e ADMIN_EMAIL=test@test.com \
   -e OPERATIONAL_BEARER_TOKEN=e2e-operational-token \
+  -e GOOGLE_CLIENT_ID=web-e2e.apps.googleusercontent.com,ios-e2e.apps.googleusercontent.com \
   tag-note:e2e
 ```
 
@@ -173,6 +174,7 @@ ssh "$E2E_HOST" "docker run -d --rm \
   -e TAGNOTE_TEST_MODE=1 \
   -e ADMIN_EMAIL=test@test.com \
   -e OPERATIONAL_BEARER_TOKEN=e2e-operational-token \
+  -e GOOGLE_CLIENT_ID=web-e2e.apps.googleusercontent.com,ios-e2e.apps.googleusercontent.com \
   tag-note:e2e"
 
 ssh "$E2E_HOST" "for i in \$(seq 1 30); do \
