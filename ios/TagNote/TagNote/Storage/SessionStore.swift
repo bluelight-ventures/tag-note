@@ -82,6 +82,12 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    func loginWithGoogle(idToken: String) async {
+        await authenticate {
+            try await api.googleLogin(idToken: idToken)
+        }
+    }
+
     func loginWithApple(identityToken: String, nonce: String?, fullName: String?) async {
         await authenticate {
             try await api.appleLogin(identityToken: identityToken, nonce: nonce, fullName: fullName)

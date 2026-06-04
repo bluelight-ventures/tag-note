@@ -34,6 +34,7 @@
 		8A0000010000000000000019 /* MarkdownDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000119 /* MarkdownDocumentTests.swift */; };
 		8A000001000000000000001A /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000120 /* Markdown */; };
 		8A000001000000000000001B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011A /* PrivacyInfo.xcprivacy */; };
+		8A000001000000000000001C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000140 /* GoogleSignIn */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8A000001000000000000001A /* Markdown in Frameworks */,
+				8A000001000000000000001C /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,6 +240,7 @@
 			name = TagNote;
 			packageProductDependencies = (
 				8A0000010000000000000120 /* Markdown */,
+				8A0000010000000000000140 /* GoogleSignIn */,
 			);
 			productName = TagNote;
 			productReference = 8A0000010000000000000020 /* TagNote.app */;
@@ -313,6 +316,7 @@
 			mainGroup = 8A0000010000000000000040;
 			packageReferences = (
 				8A0000010000000000000130 /* XCRemoteSwiftPackageReference "swift-markdown" */,
+				8A0000010000000000000141 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = 8A0000010000000000000042 /* Products */;
 			projectDirPath = "";
@@ -688,6 +692,14 @@
 				version = 0.8.0;
 			};
 		};
+		8A0000010000000000000141 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = exactVersion;
+				version = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -695,6 +707,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8A0000010000000000000130 /* XCRemoteSwiftPackageReference "swift-markdown" */;
 			productName = Markdown;
+		};
+		8A0000010000000000000140 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8A0000010000000000000141 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

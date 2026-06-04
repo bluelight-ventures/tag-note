@@ -58,6 +58,10 @@ final class TagNoteAPI {
         try await request("POST", "/auth/register", body: ["email": email, "password": password, "display_name": displayName], authorized: false)
     }
 
+    func googleLogin(idToken: String) async throws -> AuthResponse {
+        try await request("POST", "/auth/google", body: ["id_token": idToken], authorized: false)
+    }
+
     func appleLogin(identityToken: String, nonce: String?, fullName: String?) async throws -> AuthResponse {
         var body: [String: String] = ["identity_token": identityToken]
         if let nonce, !nonce.isEmpty { body["nonce"] = nonce }

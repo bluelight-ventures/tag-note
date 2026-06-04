@@ -1,3 +1,4 @@
+import GoogleSignIn
 import SwiftUI
 
 @main
@@ -15,6 +16,9 @@ struct TagNoteApp: App {
                     if appState.session.isAuthenticated {
                         await appState.refreshSettings()
                     }
+                }
+                .onOpenURL { url in
+                    GIDSignIn.sharedInstance.handle(url)
                 }
         }
     }

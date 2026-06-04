@@ -27,13 +27,19 @@ final class TagNoteE2ETests: XCTestCase {
         // The email field confirms we reached the auth screen.
         XCTAssertTrue(app.textFields["login-email-field"].waitForExistence(timeout: 8))
 
-        let byID = app.descendants(matching: .any)["apple-signin-button"]
-        let byLabel = app.buttons.containing(
+        let appleByID = app.descendants(matching: .any)["apple-signin-button"]
+        let appleByLabel = app.buttons.containing(
             NSPredicate(format: "label CONTAINS[c] %@", "Apple")
         ).firstMatch
         XCTAssertTrue(
-            byID.waitForExistence(timeout: 5) || byLabel.waitForExistence(timeout: 3),
+            appleByID.waitForExistence(timeout: 5) || appleByLabel.waitForExistence(timeout: 3),
             "Sign in with Apple button should be present on the auth screen"
+        )
+
+        let googleButton = app.descendants(matching: .any)["google-signin-button"]
+        XCTAssertTrue(
+            googleButton.waitForExistence(timeout: 3),
+            "Continue with Google button should be present on the auth screen"
         )
     }
 

@@ -1,6 +1,8 @@
 import AuthenticationServices
 import CryptoKit
+import GoogleSignIn
 import SwiftUI
+import UIKit
 
 struct AuthView: View {
     @EnvironmentObject private var appState: AppState
@@ -128,6 +130,16 @@ struct AuthView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .accessibilityIdentifier("apple-signin-button")
 
+                    Button(action: handleGoogleSignIn) {
+                        Text("Continue with Google")
+                            .font(.body.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(appState.palette.text)
+                    .accessibilityIdentifier("google-signin-button")
+
                     // Custom-server switching is a Debug-only affordance; the
                     // shipped build is a tag-note.com client.
                     if SessionStore.allowsCustomServer {
@@ -180,6 +192,46 @@ struct AuthView: View {
             session.errorMessage = "Apple sign-in failed."
         }
     }
+
+    private func handleGoogleSignIn() {
+        guard let presenting = topViewController() else {
+            session.errorMessage = "Google sign-in failed."
+            return
+        }
+        GIDSignIn.sharedInstance.signIn(withPresenting: presenting) { result, error in
+            if let error {
+                // Don't show an error when the user cancels the sheet.
+                if let gid = error as? GIDSignInError, gid.code == .canceled {
+                    return
+                }
+                session.errorMessage = "Google sign-in failed."
+                return
+            }
+            guard let idToken = result?.user.idToken?.tokenString else {
+                session.errorMessage = "Google sign-in failed."
+                return
+            }
+            Task {
+                await session.loginWithGoogle(idToken: idToken)
+                if session.isAuthenticated {
+                    await appState.refreshSettings()
+                }
+            }
+        }
+    }
+}
+
+// Finds the frontmost view controller to present the Google sign-in sheet from.
+private func topViewController() -> UIViewController? {
+    let scene = UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .first { $0.activationState == .foregroundActive } ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+    var top = scene?.keyWindow?.rootViewController
+        ?? scene?.windows.first?.rootViewController
+    while let presented = top?.presentedViewController {
+        top = presented
+    }
+    return top
 }
 
 // Generates a cryptographically random nonce string (Apple's recommended
