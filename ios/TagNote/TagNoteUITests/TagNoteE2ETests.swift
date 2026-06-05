@@ -108,6 +108,43 @@ final class TagNoteE2ETests: XCTestCase {
         XCTAssertTrue(containsText(seeded.title))
     }
 
+    // Editing a note must let the user hide the soft keyboard: focusing the
+    // content editor reveals a "Hide keyboard" control in the formatting bar that
+    // dismisses the keyboard.
+    @MainActor
+    func testEditorCanDismissKeyboard() async throws {
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+
+        let notesScreen = app.descendants(matching: .any)["notes-screen"]
+        XCTAssertTrue(notesScreen.waitForExistence(timeout: 20))
+
+        // Open the authoring surface (proven path from the screenshot test).
+        _ = openSidebarIfCompact()
+        let newNote = app.descendants(matching: .any)["sidebar-new-note"]
+        XCTAssertTrue(newNote.waitForExistence(timeout: 5))
+        newNote.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["editor-screen"].firstMatch.waitForExistence(timeout: 12))
+
+        // The dismiss control is hidden until a field is focused.
+        let dismiss = app.buttons["dismiss-keyboard-button"]
+        XCTAssertFalse(dismiss.exists, "The hide-keyboard control should be hidden when nothing is focused")
+
+        // Focus the content editor (the only TextView) to raise the keyboard. Its
+        // own identifier is shadowed by the parent's "editor-screen" id (SwiftUI
+        // propagates container identifiers), so match by element type.
+        let contentEditor = app.textViews.firstMatch
+        XCTAssertTrue(contentEditor.waitForExistence(timeout: 8))
+        contentEditor.tap()
+
+        XCTAssertTrue(dismiss.waitForExistence(timeout: 5), "A focused editor must offer a hide-keyboard control")
+        capture("06-EditorKeyboard")
+        dismiss.tap()
+        XCTAssertTrue(dismiss.waitForNonExistence(timeout: 5), "Hiding the keyboard must remove the dismiss control")
+    }
+
     // Compact width: opening a note ("Open note") presents the Read surface as a
     // real full-screen reader (ux_guidelines §6), not a floating card. Asserts the
     // read screen and its close control exist, and snapshots the reader.

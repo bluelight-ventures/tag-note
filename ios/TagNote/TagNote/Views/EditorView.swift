@@ -9,6 +9,12 @@ struct EditorView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showDiscardPrompt = false
     @State private var showDeletePrompt = false
+    @FocusState private var focusedField: EditorField?
+
+    private enum EditorField {
+        case tag
+        case content
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,6 +39,7 @@ struct EditorView: View {
                         .foregroundStyle(appState.palette.text)
                         .scrollContentBackground(.hidden)
                         .background(appState.palette.card)
+                        .focused($focusedField, equals: .content)
                         .onChange(of: viewModel.content) { _, _ in viewModel.scheduleAutosave() }
                         .accessibilityIdentifier("note-content-editor")
                 } else {
@@ -139,6 +146,7 @@ struct EditorView: View {
                 TextField("Add tag", text: $tagDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    .focused($focusedField, equals: .tag)
                     .onSubmit(commitTagDraft)
                     .onChange(of: tagDraft) { _, value in
                         // Commit on space, comma, or enter — matches the web chip input (ux_guidelines §12).
@@ -217,6 +225,16 @@ struct EditorView: View {
                 Task { await viewModel.saveNow() }
             } label: {
                 Image(systemName: "checkmark.circle")
+            }
+            if focusedField != nil {
+                Button {
+                    focusedField = nil
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .frame(width: 28, height: 28)
+                }
+                .accessibilityIdentifier("dismiss-keyboard-button")
+                .accessibilityLabel("Hide keyboard")
             }
         }
         .padding(.horizontal)
