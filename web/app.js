@@ -1,5 +1,9 @@
 const API = '/api/v1';
 
+// Reserved, display-only tag shown when a note has no user tags. It is never
+// stored, never typeable/filterable, and disappears once a real tag is added.
+const RESERVED_DEFAULT_TAG = '$default';
+
 // --- Guest Mode Storage Engine ---
 const GUEST_NOTES_KEY = 'tagnote_guest_notes';
 const GUEST_TRASH_KEY = 'tagnote_guest_trash';
@@ -2168,22 +2172,57 @@ function parseTags(str) {
     return str.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 }
 
+// Build a non-interactive, display-only `$default` tag pill. Shown wherever a
+// note/draft has zero user tags; never stored or filterable.
+function makeDefaultTagPill() {
+    const pill = document.createElement('span');
+    pill.className = 'tag tag-default';
+    pill.textContent = '#' + RESERVED_DEFAULT_TAG;
+    pill.title = 'Default tag (shown when a note has no tags)';
+    return pill;
+}
+
 // --- Chip Input Component ---
 function initChipInput(containerEl, inputEl, options) {
     options = options || {};
     var filterOnly = options.filterOnly || false;
     var onChange = options.onChange || null;
+    var showDefaultChip = options.showDefaultChip || false;
     const chips = []; // Array of {tag: string, el: HTMLElement}
     let lastChipHighlighted = false;
     let suppressChange = false;
+    let defaultChipEl = null;
+
+    // Display-only `$default` chip: visible only while the input has no real
+    // chips. Never part of getTags(); purely a visual hint.
+    function updateDefaultChip() {
+        if (!showDefaultChip) return;
+        if (chips.length === 0) {
+            if (!defaultChipEl) {
+                defaultChipEl = document.createElement('span');
+                defaultChipEl.className = 'chip tag-default';
+                defaultChipEl.title = 'Default tag (shown when a note has no tags)';
+                var lbl = document.createElement('span');
+                lbl.className = 'chip-label';
+                lbl.textContent = RESERVED_DEFAULT_TAG;
+                defaultChipEl.appendChild(lbl);
+            }
+            if (!defaultChipEl.parentNode) {
+                containerEl.insertBefore(defaultChipEl, containerEl.firstChild);
+            }
+        } else if (defaultChipEl && defaultChipEl.parentNode) {
+            defaultChipEl.remove();
+        }
+    }
 
     function notifyChange() {
+        updateDefaultChip();
         if (!suppressChange && onChange) onChange();
     }
 
     function createChip(tag) {
         tag = tag.trim().toLowerCase();
-        if (!tag || chips.some(function(c) { return c.tag === tag; })) return;
+        if (!tag || tag === RESERVED_DEFAULT_TAG || chips.some(function(c) { return c.tag === tag; })) return;
 
         // In filter-only mode, reject tags not in tagCache
         if (filterOnly && !tagCache[tag]) return;
@@ -2319,6 +2358,7 @@ function initChipInput(containerEl, inputEl, options) {
             createChip(tagArray[k]);
         }
         suppressChange = false;
+        updateDefaultChip();
     }
 
     function clearTags() {
@@ -2328,6 +2368,7 @@ function initChipInput(containerEl, inputEl, options) {
         }
         inputEl.value = '';
         lastChipHighlighted = false;
+        updateDefaultChip();
     }
 
     return { getTags: getTags, setTags: setTags, clearTags: clearTags, createChip: createChip, commitInput: commitInput };
@@ -2897,8 +2938,9 @@ function scheduleFocusAutosave() {
         setFocusAutosaveStatus('saved', draft.content || draft.tags.length ? 'Saved' : '');
         return;
     }
-    if (!draft.content || draft.tags.length === 0) {
-        setFocusAutosaveStatus('invalid', 'Add content and a tag to autosave');
+    if (!draft.content && draft.tags.length === 0) {
+        // Nothing to autosave yet (no content and no tags). Explicit save still works.
+        setFocusAutosaveStatus('idle', '');
         return;
     }
 
@@ -2911,11 +2953,9 @@ function scheduleFocusAutosave() {
 async function flushFocusAutosave(options) {
     options = options || {};
     var draft = getFocusDraft({ commitPendingTag: options.commitPendingTag });
-    if (!draft.content || draft.tags.length === 0) {
-        setFocusAutosaveStatus('invalid', 'Add content and a tag to autosave');
-        throw new Error('Content and at least one tag are required.');
-    }
-    if (!focusDraftChangedFromLastSave(draft)) {
+    // `force` lets an explicit Save create a brand-new note even when it is empty
+    // (no content, no tags) and therefore unchanged from the empty baseline.
+    if (!options.force && !focusDraftChangedFromLastSave(draft)) {
         setFocusAutosaveStatus('saved', 'Saved');
         if (options.closeAfterSave) closeFocus();
         return;
@@ -3074,11 +3114,16 @@ function openRead(note) {
     content.innerHTML = renderMarkdown(note.content);
 
     tags.innerHTML = '';
-    for (const t of (note.tags || [])) {
-        const pill = document.createElement('span');
-        pill.className = 'tag';
-        pill.textContent = '#' + t;
-        tags.appendChild(pill);
+    const readTags = note.tags || [];
+    if (readTags.length === 0) {
+        tags.appendChild(makeDefaultTagPill());
+    } else {
+        for (const t of readTags) {
+            const pill = document.createElement('span');
+            pill.className = 'tag';
+            pill.textContent = '#' + t;
+            tags.appendChild(pill);
+        }
     }
 
     overlay.style.display = '';
@@ -3116,15 +3161,14 @@ document.getElementById('focus-close').addEventListener('click', confirmCloseFoc
 document.getElementById('focus-submit').addEventListener('click', async () => {
     clearTimeout(focusAutosaveTimer);
     focusAutosaveTimer = null;
-    const draft = getFocusDraft({ commitPendingTag: true });
-    if (!draft.content || draft.tags.length === 0) {
-        showToast('Content and at least one tag are required.', 'error');
-        return;
-    }
+    // Commit any pending tag text; an empty note (no content, no tags) is allowed.
+    getFocusDraft({ commitPendingTag: true });
+    // For a brand-new note, force creation even if empty so explicit Save always works.
+    const forceCreate = !(focusMode === 'edit' && focusEditId);
     const submitBtn = document.getElementById('focus-submit');
     submitBtn.classList.add('btn-loading');
     try {
-        await flushFocusAutosave({ closeAfterSave: true, commitPendingTag: false });
+        await flushFocusAutosave({ closeAfterSave: true, commitPendingTag: false, force: forceCreate });
     } catch (e) {
         showToast('Error: ' + e.message, 'error');
     } finally {
@@ -3363,24 +3407,29 @@ function createNoteCard(note) {
 
     const tagsDiv = document.createElement('div');
     tagsDiv.className = 'note-card-tags';
-    for (const t of (note.tags || [])) {
-        const pill = document.createElement('span');
-        pill.className = 'tag clickable';
-        pill.dataset.testid = 'note-tag';
-        pill.textContent = '#' + t;
-        const isActive = currentTags.includes(t);
-        if (isActive) {
-            pill.classList.add('active');
+    const cardTags = note.tags || [];
+    if (cardTags.length === 0) {
+        tagsDiv.appendChild(makeDefaultTagPill());
+    } else {
+        for (const t of cardTags) {
+            const pill = document.createElement('span');
+            pill.className = 'tag clickable';
+            pill.dataset.testid = 'note-tag';
+            pill.textContent = '#' + t;
+            const isActive = currentTags.includes(t);
+            if (isActive) {
+                pill.classList.add('active');
+            }
+            const pillColor = getTagPillColor(t, isActive);
+            if (pillColor) {
+                pill.style.background = pillColor.bg;
+                pill.style.color = pillColor.text;
+            }
+            pill.addEventListener('click', () => {
+                filterByTag(t);
+            });
+            tagsDiv.appendChild(pill);
         }
-        const pillColor = getTagPillColor(t, isActive);
-        if (pillColor) {
-            pill.style.background = pillColor.bg;
-            pill.style.color = pillColor.text;
-        }
-        pill.addEventListener('click', () => {
-            filterByTag(t);
-        });
-        tagsDiv.appendChild(pill);
     }
     topRow.appendChild(tagsDiv);
     card.appendChild(topRow);
@@ -3691,7 +3740,7 @@ attachTagAutocomplete(document.getElementById('filter-tags'), function() { retur
 focusChips = initChipInput(
     document.getElementById('focus-chip-container'),
     document.getElementById('focus-tag-input'),
-    { onChange: scheduleFocusAutosave }
+    { onChange: scheduleFocusAutosave, showDefaultChip: true }
 );
 
 document.getElementById('focus-content').addEventListener('input', scheduleFocusAutosave);

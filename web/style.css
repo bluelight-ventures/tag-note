@@ -1179,6 +1179,18 @@ body {
     filter: brightness(var(--tag-hover-brightness));
 }
 
+/* Display-only `$default` tag: muted, non-interactive, no hover/remove. */
+.tag-default {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    cursor: default;
+    font-style: italic;
+}
+.chip.tag-default {
+    opacity: 0.85;
+}
+
 .show-all-tags {
     display: inline-block;
     padding: 3px 10px;

@@ -156,6 +156,45 @@ test('test user note creation autosaves and closes without discard warning', asy
   await expect(page.getByTestId('note-card').filter({ hasText: content })).toBeVisible();
 });
 
+test('content-only note autosaves and shows the $default tag until a tag is added', async ({ page }) => {
+  const suffix = uniqueSuffix();
+  const content = `Tagless E2E note ${suffix}`;
+  const tag = `realtag-${suffix}`;
+
+  await login(page);
+  await page.getByTestId('new-note-button').click();
+  await expect(page.locator('#focus-overlay')).toBeVisible();
+
+  // The editor shows a display-only $default chip while there are no tags.
+  await expect(page.locator('#focus-chip-container .tag-default')).toBeVisible();
+
+  // Content but no tag still autosaves (autosave fires on content OR tags).
+  await setFocusEditorContent(page, content);
+  await expect(page.locator('#focus-save-status')).toHaveText('Saved');
+  await page.locator('#focus-close').click();
+  await expect(page.locator('#focus-overlay')).toBeHidden();
+
+  // The saved card shows the synthesized $default chip because it has no tags.
+  const card = page.getByTestId('note-card').filter({ hasText: content });
+  await expect(card).toBeVisible();
+  await expect(card.locator('.tag-default')).toBeVisible();
+
+  // Adding a real tag removes the $default chip everywhere.
+  await card.getByTestId('edit-note-button').click();
+  await expect(page.locator('#focus-overlay')).toBeVisible();
+  await expect(page.locator('#focus-chip-container .tag-default')).toBeVisible();
+  await page.locator('#focus-tag-input').fill(tag);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#focus-chip-container .tag-default')).toBeHidden();
+  await expect(page.locator('#focus-save-status')).toHaveText('Saved');
+  await page.locator('#focus-close').click();
+  await expect(page.locator('#focus-overlay')).toBeHidden();
+
+  const taggedCard = page.getByTestId('note-card').filter({ hasText: content });
+  await expect(taggedCard.locator('.tag-default')).toHaveCount(0);
+  await expect(taggedCard.getByTestId('note-tag').filter({ hasText: tag })).toBeVisible();
+});
+
 test('test user note edits autosave without clicking save', async ({ page }) => {
   const suffix = uniqueSuffix();
   const originalContent = `Autosave edit original ${suffix}`;
