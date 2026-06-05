@@ -22,6 +22,11 @@ struct RootView: View {
             }
         }
         .tint(appState.palette.accent)
+        // The app uses its own themed palette, so render system-colored UI
+        // (text-field text/placeholders, segmented controls, keyboard) to match
+        // the active theme's brightness instead of the device's Dark/Light Mode.
+        // Otherwise a light theme on a Dark-Mode device shows white-on-cream text.
+        .preferredColorScheme(appState.palette.isDark ? .dark : .light)
     }
 
     private var shouldOpenEditorForUITest: Bool {
