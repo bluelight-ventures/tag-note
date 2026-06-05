@@ -1,5 +1,9 @@
 import Foundation
 
+/// Reserved, display-only tag shown when a note has no user tags. It is never
+/// stored, typeable, or filterable, and disappears once a real tag is added.
+let reservedDefaultTag = "$default"
+
 @MainActor
 final class EditorViewModel: ObservableObject {
     @Published var content: String
@@ -34,12 +38,15 @@ final class EditorViewModel: ObservableObject {
 
     func scheduleAutosave() {
         autosaveTask?.cancel()
-        guard hasChanges else {
-            saveStatus = .saved
+        // Never autosave a completely empty draft (no content and no tags); an
+        // explicit Save still works. A note may otherwise have content or tags
+        // (or both) — only one is required to autosave.
+        guard canAutosave else {
+            saveStatus = .idle
             return
         }
-        guard isValidDraft else {
-            saveStatus = .invalid(invalidReason)
+        guard hasChanges else {
+            saveStatus = .saved
             return
         }
         saveStatus = .unsaved
@@ -66,7 +73,8 @@ final class EditorViewModel: ObservableObject {
 
     func addTag(_ rawTag: String) {
         let tag = rawTag.trimmed.lowercased()
-        guard !tag.isEmpty, !tags.contains(tag) else { return }
+        // `$default` is reserved for the display-only chip; it can't be added.
+        guard !tag.isEmpty, tag != reservedDefaultTag, !tags.contains(tag) else { return }
         tags.append(tag)
         scheduleAutosave()
     }
@@ -103,10 +111,6 @@ final class EditorViewModel: ObservableObject {
     }
 
     private func save(closeAfterSave: Bool) async {
-        guard isValidDraft else {
-            saveStatus = .invalid(invalidReason)
-            return
-        }
         if saveTask != nil {
             await saveTask?.value
             if hasChanges {
@@ -146,20 +150,10 @@ final class EditorViewModel: ObservableObject {
         }
     }
 
-    private var isValidDraft: Bool {
-        !content.trimmed.isEmpty && !tags.isEmpty
-    }
-
-    // A short, actionable reason the draft isn't autosaving yet. A note is
-    // tag-first, so it needs both content and at least one tag.
-    private var invalidReason: String {
-        if tags.isEmpty {
-            return "Add a tag"
-        }
-        if content.trimmed.isEmpty {
-            return "Add content"
-        }
-        return "Add a tag"
+    // A draft is eligible for autosave when it has content or at least one tag.
+    // A completely empty draft can still be saved explicitly via saveNow().
+    private var canAutosave: Bool {
+        !content.trimmed.isEmpty || !tags.isEmpty
     }
 }
 

@@ -132,7 +132,6 @@ enum PreviewMode: String, CaseIterable, Identifiable {
 
 enum SaveStatus: Equatable {
     case idle
-    case invalid(String)
     case unsaved
     case saving
     case saved
@@ -142,8 +141,6 @@ enum SaveStatus: Equatable {
         switch self {
         case .idle:
             return ""
-        case .invalid(let message):
-            return message
         case .unsaved:
             return "Unsaved"
         case .saving:

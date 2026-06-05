@@ -240,6 +240,9 @@ struct ResizableNoteReadPanel: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
                             FlowLayout(spacing: 6, rowSpacing: 6) {
+                                if note.tags.isEmpty {
+                                    DefaultTagChip()
+                                }
                                 ForEach(note.tags, id: \.self) { tag in
                                     TagChip(tag, tagInfo: availableTags.first { $0.name == tag })
                                 }
@@ -393,6 +396,9 @@ struct NoteCard: View {
                 .accessibilityLabel(note.pinned ? "Unpin note" : "Pin note")
 
                 FlowLayout(spacing: 6, rowSpacing: 6) {
+                    if note.tags.isEmpty {
+                        DefaultTagChip()
+                    }
                     ForEach(note.tags, id: \.self) { tag in
                         TagChip(tag, tagInfo: availableTags.first { $0.name == tag }) { onTagTap(tag) }
                     }
@@ -625,6 +631,28 @@ struct TagChip: View {
         if let pill { return pill.text }
         if isActive { return appState.palette.card }
         return appState.palette.secondaryText
+    }
+}
+
+/// Non-interactive, display-only `$default` chip shown when a note/draft has no
+/// user tags. It is never stored or selectable; it disappears once a tag exists.
+struct DefaultTagChip: View {
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        Text("#\(reservedDefaultTag)")
+            .font(.system(size: 15, weight: .bold))
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .foregroundStyle(appState.palette.secondaryText)
+            .overlay(
+                Capsule().strokeBorder(
+                    appState.palette.border,
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                )
+            )
+            .accessibilityLabel("Default tag")
     }
 }
 

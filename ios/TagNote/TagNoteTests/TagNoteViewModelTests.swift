@@ -208,10 +208,6 @@ final class TagNoteViewModelTests: XCTestCase {
             }
         }
 
-        let invalid = EditorViewModel(note: nil, api: api)
-        await invalid.saveNow()
-        XCTAssertEqual(invalid.saveStatus, .invalid("Add a tag"))
-
         let editor = EditorViewModel(note: nil, api: api)
         editor.addTag(" IOS ")
         editor.addTag("ios")
@@ -240,6 +236,59 @@ final class TagNoteViewModelTests: XCTestCase {
         XCTAssertTrue(seenPaths.contains("/api/v1/images"))
         XCTAssertTrue(seenPaths.contains("/api/v1/notes/short-1/pin"))
         XCTAssertTrue(seenPaths.contains("/api/v1/notes/short-1"))
+    }
+
+    func testEmptyDraftStaysIdleAndNeverAutosaves() async {
+        ViewModelURLProtocolStub.handler = { request in
+            XCTFail("an empty draft must not hit the network: \(request.url?.path ?? "")")
+            return HTTPURLResponse.vmStub(url: request.url!, statusCode: 500, body: "")
+        }
+
+        let editor = EditorViewModel(note: nil, api: api)
+        editor.scheduleAutosave()
+        XCTAssertEqual(editor.saveStatus, .idle)
+
+        // Give the (cancelled) autosave window a chance to misfire.
+        try? await Task.sleep(nanoseconds: 1_800_000_000)
+        XCTAssertEqual(editor.saveStatus, .idle)
+    }
+
+    func testContentOnlyDraftSavesWithNoTag() async {
+        ViewModelURLProtocolStub.handler = { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("POST", "/api/v1/notes"):
+                let payload = try? JSONSerialization.jsonObject(with: request.vmBodyData ?? Data()) as? [String: Any]
+                XCTAssertEqual(payload?["content"] as? String, "Tagless")
+                XCTAssertEqual(payload?["tags"] as? [String], [])
+                return HTTPURLResponse.vmStub(url: request.url!, statusCode: 201, body: """
+                {"id":"note-9","short_id":"short-9","created_at":"2026-05-28T08:00:00Z"}
+                """)
+            default:
+                return HTTPURLResponse.vmStub(url: request.url!, statusCode: 500, body: #"{"error":"unexpected"}"#)
+            }
+        }
+
+        let editor = EditorViewModel(note: nil, api: api)
+        editor.content = "Tagless"
+        await editor.saveNow()
+        XCTAssertEqual(editor.saveStatus, .saved)
+        XCTAssertTrue(editor.tags.isEmpty)
+    }
+
+    func testAddTagIgnoresReservedDefault() {
+        let editor = EditorViewModel(note: nil, api: api)
+        editor.addTag("$default")
+        editor.addTag(" $DEFAULT ")
+        XCTAssertTrue(editor.tags.isEmpty)
+    }
+
+    func testRemovingLastTagWithContentStillAutosaves() {
+        let note = Self.note(id: "n", shortID: "n", content: "Body", tags: ["work"])
+        let editor = EditorViewModel(note: note, api: api)
+        editor.removeTag("work")
+        XCTAssertTrue(editor.tags.isEmpty)
+        // Content remains, so the draft is still eligible to autosave.
+        XCTAssertEqual(editor.saveStatus, .unsaved)
     }
 
     func testTagsViewModelFiltersMutatesAndFallsBackToCache() async throws {
