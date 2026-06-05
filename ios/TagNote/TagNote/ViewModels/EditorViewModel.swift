@@ -39,7 +39,7 @@ final class EditorViewModel: ObservableObject {
             return
         }
         guard isValidDraft else {
-            saveStatus = .invalid("Add content and a tag to autosave")
+            saveStatus = .invalid(invalidReason)
             return
         }
         saveStatus = .unsaved
@@ -104,7 +104,7 @@ final class EditorViewModel: ObservableObject {
 
     private func save(closeAfterSave: Bool) async {
         guard isValidDraft else {
-            saveStatus = .invalid("Add content and a tag to autosave")
+            saveStatus = .invalid(invalidReason)
             return
         }
         if saveTask != nil {
@@ -148,6 +148,18 @@ final class EditorViewModel: ObservableObject {
 
     private var isValidDraft: Bool {
         !content.trimmed.isEmpty && !tags.isEmpty
+    }
+
+    // A short, actionable reason the draft isn't autosaving yet. A note is
+    // tag-first, so it needs both content and at least one tag.
+    private var invalidReason: String {
+        if tags.isEmpty {
+            return "Add a tag"
+        }
+        if content.trimmed.isEmpty {
+            return "Add content"
+        }
+        return "Add a tag"
     }
 }
 

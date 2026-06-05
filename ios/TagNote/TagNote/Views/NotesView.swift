@@ -437,6 +437,12 @@ struct NoteCard: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
+                if let imageSource = firstImageSource {
+                    MarkdownImageView(source: imageSource, alt: "", baseURL: appState.session.serverURL)
+                        .frame(maxWidth: .infinity, maxHeight: 220, alignment: .leading)
+                        .clipped()
+                }
+
                 if let title = previewParts.title {
                     Text(title)
                         .font(.system(size: 18, weight: .bold))
@@ -452,6 +458,12 @@ struct NoteCard: View {
                         .foregroundStyle(appState.palette.text)
                         .lineLimit(7)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if firstImageSource == nil, previewParts.title == nil, previewParts.body.isEmpty {
+                    Text("Untitled note")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(appState.palette.secondaryText)
                 }
             }
 
@@ -503,7 +515,19 @@ struct NoteCard: View {
             .replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"[*_`>\[\]()]+"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return stripped.isEmpty ? "Untitled note" : stripped
+        return stripped
+    }
+
+    // The first image URL in the note, used to show a card thumbnail.
+    private var firstImageSource: String? {
+        let pattern = #"!\[[^\]]*\]\(([^)]+)\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(note.content.startIndex..., in: note.content)
+        guard let match = regex.firstMatch(in: note.content, range: range),
+              let urlRange = Range(match.range(at: 1), in: note.content) else {
+            return nil
+        }
+        return String(note.content[urlRange])
     }
 
     private var previewParts: (title: String?, body: String) {

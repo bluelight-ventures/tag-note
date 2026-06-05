@@ -210,7 +210,7 @@ final class TagNoteViewModelTests: XCTestCase {
 
         let invalid = EditorViewModel(note: nil, api: api)
         await invalid.saveNow()
-        XCTAssertEqual(invalid.saveStatus, .invalid("Add content and a tag to autosave"))
+        XCTAssertEqual(invalid.saveStatus, .invalid("Add a tag"))
 
         let editor = EditorViewModel(note: nil, api: api)
         editor.addTag(" IOS ")

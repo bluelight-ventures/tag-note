@@ -318,7 +318,7 @@ private struct SaveStatusPill: View {
         case .unsaved: return "Unsaved"
         case .saving: return "Saving…"
         case .saved: return "Saved"
-        case .invalid: return "Invalid"
+        case let .invalid(message): return message
         case .failed: return "Failed"
         case .idle: return ""
         }
@@ -329,7 +329,7 @@ private struct SaveStatusPill: View {
         case .unsaved: return "pencil"
         case .saving: return "arrow.triangle.2.circlepath"
         case .saved: return "checkmark"
-        case .invalid: return "exclamationmark.triangle"
+        case .invalid: return "tag"
         case .failed: return "wifi.slash"
         case .idle: return ""
         }
@@ -337,9 +337,9 @@ private struct SaveStatusPill: View {
 
     private var color: Color {
         switch status {
-        case .unsaved, .saving: return appState.palette.warning
+        case .unsaved, .saving, .invalid: return appState.palette.warning
         case .saved: return appState.palette.success
-        case .invalid, .failed: return appState.palette.destructive
+        case .failed: return appState.palette.destructive
         case .idle: return appState.palette.secondaryText
         }
     }
@@ -479,7 +479,7 @@ struct MarkdownPreviewView: View {
 // Renders a markdown image. Relative sources (e.g. `/uploads/x.png`) are
 // resolved against the server base URL; uploads are link-private so no auth
 // header is needed.
-private struct MarkdownImageView: View {
+struct MarkdownImageView: View {
     @EnvironmentObject private var appState: AppState
     let source: String
     let alt: String
