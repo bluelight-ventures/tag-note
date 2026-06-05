@@ -108,6 +108,39 @@ final class TagNoteE2ETests: XCTestCase {
         XCTAssertTrue(containsText(seeded.title))
     }
 
+    // Compact width: opening a note ("Open note") presents the Read surface as a
+    // real full-screen reader (ux_guidelines §6), not a floating card. Asserts the
+    // read screen and its close control exist, and snapshots the reader.
+    @MainActor
+    func testReaderOpensFullScreenOnCompactWidth() async throws {
+        app.launchEnvironment["TAGNOTE_UI_FORCE_COMPACT"] = "1"
+
+        let seeded = try await seedNote()
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+
+        let notesScreen = app.descendants(matching: .any)["notes-screen"]
+        XCTAssertTrue(notesScreen.waitForExistence(timeout: 20))
+        XCTAssertTrue(containsText(seeded.title))
+
+        let openButton = app.buttons["Open note"].firstMatch
+        XCTAssertTrue(openButton.waitForExistence(timeout: 5), "Note cards must offer an Open (expand) control")
+        openButton.tap()
+
+        let readScreen = app.descendants(matching: .any)["note-read-screen"]
+        XCTAssertTrue(readScreen.waitForExistence(timeout: 5), "Opening a note must present the full-screen reader")
+        capture("05-Reader")
+
+        // The reader must offer a close control (by identifier or its "Close" label).
+        let closeByID = app.descendants(matching: .any)["note-read-close-button"]
+        let closeByLabel = app.buttons["Close"]
+        XCTAssertTrue(
+            closeByID.waitForExistence(timeout: 4) || closeByLabel.waitForExistence(timeout: 2),
+            "The full-screen reader must expose a close control"
+        )
+    }
+
     // Captures a set of full-screen screenshots of the key surfaces, attached to
     // the test result (lifetime .keepAlways) so they can be exported from the
     // .xcresult for the App Store Connect listing. Runs on whatever device the

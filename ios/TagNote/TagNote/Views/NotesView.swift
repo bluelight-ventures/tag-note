@@ -181,6 +181,7 @@ private enum NotesSheet: Identifiable {
 
 struct ResizableNoteReadPanel: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("noteReadPanelWidth") private var storedWidth = 700.0
     @AppStorage("noteReadPanelHeight") private var storedHeight = 640.0
     @State private var dragStartSize: CGSize?
@@ -190,7 +191,37 @@ struct ResizableNoteReadPanel: View {
     let onClose: () -> Void
     let onEdit: () -> Void
 
+    // Phone (compact width) reads a note in a real full-screen reader; iPad /
+    // regular width keeps the resizable floating panel beside the content
+    // (ux_guidelines §6 — Read is a full-screen detail view on mobile).
+    private var isCompact: Bool {
+        if ProcessInfo.processInfo.environment["TAGNOTE_UI_FORCE_COMPACT"] == "1" { return true }
+        return horizontalSizeClass == .compact
+    }
+
     var body: some View {
+        if isCompact {
+            fullScreenReader
+        } else {
+            resizablePanel
+        }
+    }
+
+    // Phone: a real full-screen reader — edge-to-edge, no floating card, dim
+    // backdrop, or resize grip. Mirrors the web read overlay's chrome.
+    private var fullScreenReader: some View {
+        VStack(spacing: 0) {
+            compactHeader
+            Divider().overlay(appState.palette.border)
+            readerScroll(showDate: false)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(appState.palette.background.ignoresSafeArea())
+        .accessibilityIdentifier("note-read-screen")
+    }
+
+    // iPad / regular width: a resizable floating panel over a dim backdrop.
+    private var resizablePanel: some View {
         GeometryReader { geometry in
             let maxWidth = max(1, geometry.size.width - 32)
             let maxHeight = max(1, geometry.size.height - 48)
@@ -205,61 +236,8 @@ struct ResizableNoteReadPanel: View {
                     .onTapGesture(perform: onClose)
 
                 VStack(spacing: 0) {
-                    HStack {
-                        Button("Close", action: onClose)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(appState.palette.accent)
-                            .padding(.horizontal, 18)
-                            .frame(height: 52)
-                            .background(appState.palette.card.opacity(0.86))
-                            .clipShape(Capsule())
-                            .accessibilityIdentifier("note-read-close-button")
-
-                        Spacer()
-
-                        Text("Note")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(appState.palette.text)
-
-                        Spacer()
-
-                        Button(action: onEdit) {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 19, weight: .semibold))
-                                .frame(width: 52, height: 52)
-                        }
-                        .foregroundStyle(appState.palette.accent)
-                        .background(appState.palette.card.opacity(0.86))
-                        .clipShape(Circle())
-                        .accessibilityLabel("Edit note")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            FlowLayout(spacing: 6, rowSpacing: 6) {
-                                if note.tags.isEmpty {
-                                    DefaultTagChip()
-                                }
-                                ForEach(note.tags, id: \.self) { tag in
-                                    TagChip(tag, tagInfo: availableTags.first { $0.name == tag })
-                                }
-                            }
-
-                            Text(RelativeTime.format(note.displayDate))
-                                .font(.system(size: 13, weight: .semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(appState.palette.secondaryText)
-
-                            MarkdownPreviewView(document: .parse(note.content))
-                                .environmentObject(appState)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 28)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    panelHeader
+                    readerScroll(showDate: true)
                 }
                 .frame(width: panelWidth, height: panelHeight)
                 .background(appState.palette.card)
@@ -275,6 +253,108 @@ struct ResizableNoteReadPanel: View {
             .animation(.snappy(duration: 0.18), value: panelHeight)
         }
         .accessibilityIdentifier("note-read-screen")
+    }
+
+    // Phone header: date title leading, Edit + Close trailing.
+    private var compactHeader: some View {
+        HStack(spacing: 12) {
+            Text(readTitle)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(appState.palette.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Spacer(minLength: 8)
+
+            Button("Edit", action: onEdit)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(appState.palette.accent)
+                .accessibilityLabel("Edit note")
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .foregroundStyle(appState.palette.secondaryText)
+            .accessibilityIdentifier("note-read-close-button")
+            .accessibilityLabel("Close")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    // Panel header: Close / "Note" / Edit (regular width).
+    private var panelHeader: some View {
+        HStack {
+            Button("Close", action: onClose)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(appState.palette.accent)
+                .padding(.horizontal, 18)
+                .frame(height: 52)
+                .background(appState.palette.card.opacity(0.86))
+                .clipShape(Capsule())
+                .accessibilityIdentifier("note-read-close-button")
+
+            Spacer()
+
+            Text("Note")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(appState.palette.text)
+
+            Spacer()
+
+            Button(action: onEdit) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 19, weight: .semibold))
+                    .frame(width: 52, height: 52)
+            }
+            .foregroundStyle(appState.palette.accent)
+            .background(appState.palette.card.opacity(0.86))
+            .clipShape(Circle())
+            .accessibilityLabel("Edit note")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+    }
+
+    private func readerScroll(showDate: Bool) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                FlowLayout(spacing: 6, rowSpacing: 6) {
+                    if note.tags.isEmpty {
+                        DefaultTagChip()
+                    }
+                    ForEach(note.tags, id: \.self) { tag in
+                        TagChip(tag, tagInfo: availableTags.first { $0.name == tag })
+                    }
+                }
+
+                if showDate {
+                    Text(RelativeTime.format(note.displayDate))
+                        .font(.system(size: 13, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(appState.palette.secondaryText)
+                }
+
+                MarkdownPreviewView(document: .parse(note.content))
+                    .environmentObject(appState)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, showDate ? 0 : 16)
+            .padding(.bottom, 28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // "4d ago" — with an "(edited)" suffix when the note was updated after
+    // creation, matching the web read overlay's title (which is keyed off the
+    // created time, not the updated time).
+    private var readTitle: String {
+        let base = RelativeTime.format(note.createdAt)
+        return note.updatedAt != nil ? "\(base) (edited)" : base
     }
 
     private func resizeHandle(panelWidth: CGFloat, panelHeight: CGFloat, minWidth: CGFloat, maxWidth: CGFloat, minHeight: CGFloat, maxHeight: CGFloat) -> some View {
