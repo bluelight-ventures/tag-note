@@ -24,19 +24,11 @@ func New(r repo.Repository) *Service {
 	return &Service{repo: r}
 }
 
-// CreateNote validates input, generates a ULID, and persists a new sub-note.
+// CreateNote generates a ULID and persists a new sub-note. A note may have no
+// tags and/or no content; an untagged note is rendered with the display-only
+// "$default" tag by clients (it is reserved and never stored).
 func (s *Service) CreateNote(ctx context.Context, userID string, req model.CreateRequest) (*model.CreateResponse, error) {
-	if strings.TrimSpace(req.Content) == "" {
-		return nil, fmt.Errorf("content must not be empty")
-	}
-	if len(req.Tags) == 0 {
-		return nil, fmt.Errorf("at least one tag is required")
-	}
-
 	tags := normalizeTags(req.Tags)
-	if len(tags) == 0 {
-		return nil, fmt.Errorf("at least one valid tag is required")
-	}
 
 	now := time.Now().UTC()
 	id := ulid.MustNew(ulid.Timestamp(now), rand.Reader)
@@ -107,16 +99,12 @@ func (s *Service) UpdateNote(ctx context.Context, userID, id string, req model.U
 	if req.Content == nil && req.Tags == nil {
 		return nil, fmt.Errorf("nothing to update")
 	}
-	if req.Content != nil && strings.TrimSpace(*req.Content) == "" {
-		return nil, fmt.Errorf("content must not be empty")
-	}
 
+	// Content and tags may both be empty; an untagged note renders the
+	// display-only "$default" tag on clients.
 	var normalizedTags *[]string
 	if req.Tags != nil {
 		tags := normalizeTags(*req.Tags)
-		if len(tags) == 0 {
-			return nil, fmt.Errorf("at least one valid tag is required")
-		}
 		normalizedTags = &tags
 	}
 
@@ -237,9 +225,6 @@ func (s *Service) ImportNotes(ctx context.Context, userID string, notes []model.
 			continue
 		}
 		tags := normalizeTags(n.Tags)
-		if len(tags) == 0 {
-			continue
-		}
 
 		sorted := make([]string, len(tags))
 		copy(sorted, tags)
@@ -303,15 +288,20 @@ func (s *Service) createImportedNote(ctx context.Context, userID string, n model
 	return nil
 }
 
+// reservedDefaultTag is a display-only tag synthesized by clients for untagged
+// notes. It must never be stored, so users cannot create or select it.
+const reservedDefaultTag = "$default"
+
 func normalizeTags(tags []string) []string {
 	var result []string
 	seen := make(map[string]bool)
 	for _, t := range tags {
 		t = strings.ToLower(strings.TrimSpace(t))
-		if t != "" && !seen[t] {
-			seen[t] = true
-			result = append(result, t)
+		if t == "" || t == reservedDefaultTag || seen[t] {
+			continue
 		}
+		seen[t] = true
+		result = append(result, t)
 	}
 	return result
 }
@@ -396,9 +386,6 @@ func (s *Service) ImportData(ctx context.Context, userID string, req model.FullI
 				continue
 			}
 			tags := normalizeTags(n.Tags)
-			if len(tags) == 0 {
-				continue
-			}
 			sorted := make([]string, len(tags))
 			copy(sorted, tags)
 			sort.Strings(sorted)
@@ -439,9 +426,6 @@ func (s *Service) ImportData(ctx context.Context, userID string, req model.FullI
 			continue
 		}
 		tags := normalizeTags(n.Tags)
-		if len(tags) == 0 {
-			continue
-		}
 		sorted := make([]string, len(tags))
 		copy(sorted, tags)
 		sort.Strings(sorted)
