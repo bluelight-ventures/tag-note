@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.5] - 2026-06-05
+
+### Changed
+
+- The Privacy Policy now discloses Sign in with Apple, including the "Hide My
+  Email" private relay case.
+
+### Removed
+
+- Removed the unused `/.well-known/apple-developer-domain-association.txt` route
+  and `APPLE_DOMAIN_ASSOCIATION` config. Apple does not require a domain
+  association file for Sign in with Apple on the web.
+
+---
+
 ## [1.6.4] - 2026-06-04
 
 ### Added
@@ -392,7 +407,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.4...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.5...HEAD
+[1.6.5]: https://github.com/runminglu/tag-note/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/runminglu/tag-note/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/runminglu/tag-note/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/runminglu/tag-note/compare/v1.6.1...v1.6.2

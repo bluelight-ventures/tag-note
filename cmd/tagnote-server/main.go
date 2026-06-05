@@ -240,17 +240,6 @@ func main() {
 		return c.Send(file)
 	})
 
-	// Sign in with Apple domain association (used to verify the web Services ID's
-	// domain in the Apple Developer portal). Content comes from the env var.
-	app.Get("/.well-known/apple-developer-domain-association.txt", func(c *fiber.Ctx) error {
-		content := os.Getenv("APPLE_DOMAIN_ASSOCIATION")
-		if content == "" {
-			return c.SendStatus(fiber.StatusNotFound)
-		}
-		c.Set("Content-Type", "text/plain; charset=utf-8")
-		return c.SendString(content)
-	})
-
 	// Support / help (also the App Store Connect Support URL)
 	app.Get("/support", func(c *fiber.Ctx) error {
 		file, err := web.Assets.ReadFile("support.html")

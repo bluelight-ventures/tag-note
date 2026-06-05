@@ -301,6 +301,19 @@ test('app page injects only the web Google client ID, not the audience list', as
   expect(clientId).toBe('web-e2e.apps.googleusercontent.com');
 });
 
+test('app page injects the Apple Services ID when web Apple sign-in is configured', async ({ request }) => {
+  // The web Apple flow is initialized with the Services ID (APPLE_WEB_CLIENT_ID).
+  const res = await request.get('/app');
+  expect(res.ok()).toBeTruthy();
+  const html = await res.text();
+
+  const match = html.match(/window\.APPLE_CLIENT_ID\s*=\s*"([^"]*)"/);
+  test.skip(!match, 'Sign in with Apple (web) is not configured on this server');
+
+  // The CI e2e server is configured with the web Services ID.
+  expect(match![1]).toBe('com.tag-note.web-e2e');
+});
+
 test('admin dashboard displays protected metrics', async ({ page, request }) => {
   const token = await getAdminToken(request);
 
