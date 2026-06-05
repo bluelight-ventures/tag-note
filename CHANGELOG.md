@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-06-05
+
+### Added
+
+- Notes can now be saved with no tag and/or no content. A note with no tags
+  shows a reserved, display-only `$default` tag chip in the editor, on cards,
+  and in the read view; it disappears as soon as a real tag is added and is
+  never stored, typed, filtered, or searchable.
+
+### Changed
+
+- Autosave now fires when a draft has content **or** at least one tag, and
+  never when both are empty. Explicit Save always works, so a brand-new note can
+  be created even when empty. The old "Add a tag / Add content" invalid save
+  state has been removed. Applies to the web app and the iOS app.
+
+---
+
 ## [1.6.5] - 2026-06-05
 
 ### Changed
@@ -407,7 +425,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.6.5...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/runminglu/tag-note/compare/v1.6.5...v1.7.0
 [1.6.5]: https://github.com/runminglu/tag-note/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/runminglu/tag-note/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/runminglu/tag-note/compare/v1.6.2...v1.6.3
