@@ -499,6 +499,7 @@ struct NoteCard: View {
     private var previewText: String {
         let raw = note.snippet?.isEmpty == false ? note.snippet ?? "" : note.content
         let stripped = raw
+            .replacingOccurrences(of: #"!\[([^\]]*)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"[*_`>\[\]()]+"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -521,6 +522,7 @@ struct NoteCard: View {
             .replacingOccurrences(of: #"[*_`>\[\]()]+"#, with: "", options: .regularExpression)
         let body = lines.dropFirst(firstIndex + 1)
             .joined(separator: "\n")
+            .replacingOccurrences(of: #"!\[([^\]]*)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"(?m)^#{1,6}\s*"#, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"[*_`>\[\]()]+"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)

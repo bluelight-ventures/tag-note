@@ -76,4 +76,51 @@ final class MarkdownDocumentTests: XCTestCase {
             ])
         ])
     }
+
+    func testParsesStandaloneImage() {
+        let document = MarkdownDocument.parse("![](/uploads/01kssytzsm1akjhhk0cma7hvzg.png)")
+
+        XCTAssertEqual(document.blocks, [
+            .image(source: "/uploads/01kssytzsm1akjhhk0cma7hvzg.png", alt: "")
+        ])
+    }
+
+    func testParsesImageAltText() {
+        let document = MarkdownDocument.parse("![A screenshot](/uploads/x.png)")
+
+        XCTAssertEqual(document.blocks, [
+            .image(source: "/uploads/x.png", alt: "A screenshot")
+        ])
+    }
+
+    func testParsesMultipleImagesInOneParagraph() {
+        // Regression: two uploaded images back to back must each become an image
+        // block, not degrade to literal "!/uploads/..." text.
+        let document = MarkdownDocument.parse("![](/uploads/a.png)![](/uploads/b.png)")
+
+        XCTAssertEqual(document.blocks, [
+            .image(source: "/uploads/a.png", alt: ""),
+            .image(source: "/uploads/b.png", alt: "")
+        ])
+    }
+
+    func testSplitsTextAndImageInSameParagraph() {
+        let document = MarkdownDocument.parse("See ![shot](/uploads/x.png) here")
+
+        XCTAssertEqual(document.blocks, [
+            .paragraph("See"),
+            .image(source: "/uploads/x.png", alt: "shot"),
+            .paragraph("here")
+        ])
+    }
+
+    func testParsesImageInsideListItem() {
+        let document = MarkdownDocument.parse("- ![](/uploads/x.png)")
+
+        XCTAssertEqual(document.blocks, [
+            .unorderedList([
+                MarkdownListItem(blocks: [.image(source: "/uploads/x.png", alt: "")])
+            ])
+        ])
+    }
 }

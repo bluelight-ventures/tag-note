@@ -398,6 +398,8 @@ struct MarkdownPreviewView: View {
                 .font(.body)
                 .lineSpacing(4)
                 .frame(maxWidth: .infinity, alignment: .leading))
+        case let .image(source, alt):
+            return AnyView(MarkdownImageView(source: source, alt: alt, baseURL: appState.session.serverURL))
         case let .unorderedList(items):
             return AnyView(VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
@@ -471,5 +473,63 @@ struct MarkdownPreviewView: View {
         default:
             return .headline
         }
+    }
+}
+
+// Renders a markdown image. Relative sources (e.g. `/uploads/x.png`) are
+// resolved against the server base URL; uploads are link-private so no auth
+// header is needed.
+private struct MarkdownImageView: View {
+    @EnvironmentObject private var appState: AppState
+    let source: String
+    let alt: String
+    let baseURL: URL?
+
+    private var resolvedURL: URL? {
+        if let direct = URL(string: source), direct.scheme != nil {
+            return direct
+        }
+        guard let baseURL else { return nil }
+        return URL(string: source, relativeTo: baseURL)?.absoluteURL
+    }
+
+    var body: some View {
+        Group {
+            if let resolvedURL {
+                AsyncImage(url: resolvedURL) { phase in
+                    switch phase {
+                    case .empty:
+                        placeholder(systemImage: "photo", text: "Loading image…")
+                            .overlay(ProgressView())
+                    case let .success(image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    case .failure:
+                        placeholder(systemImage: "exclamationmark.triangle", text: alt.isEmpty ? "Image unavailable" : alt)
+                    @unknown default:
+                        placeholder(systemImage: "photo", text: alt.isEmpty ? "Image" : alt)
+                    }
+                }
+            } else {
+                placeholder(systemImage: "photo", text: alt.isEmpty ? "Image" : alt)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel(alt.isEmpty ? "Image" : alt)
+    }
+
+    private func placeholder(systemImage: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+            Text(text)
+        }
+        .font(.footnote)
+        .foregroundStyle(appState.palette.secondaryText)
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(appState.palette.background)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
