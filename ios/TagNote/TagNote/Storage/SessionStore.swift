@@ -33,6 +33,7 @@ final class SessionStore: ObservableObject {
     init(api: TagNoteAPI = TagNoteAPI(), cache: LocalCache = LocalCache()) {
         self.api = api
         self.cache = cache
+        Self.migrateKeychainToSharedAccessGroup()
         if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
             KeychainStore.delete(Keys.serverURL)
             KeychainStore.delete(Keys.token)
@@ -165,6 +166,23 @@ final class SessionStore: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// One-time migration so the auth token and server URL move into the shared
+    /// keychain access group (the first `keychain-access-groups` entry), making
+    /// them readable by the Share Extension. Items written by builds that predate
+    /// the entitlement live in the app's default access group; re-writing them
+    /// here (delete + add) lands them in the shared group. Idempotent via a flag.
+    private static func migrateKeychainToSharedAccessGroup() {
+        let flag = "didMigrateKeychainToSharedGroup"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return }
+        if let token = KeychainStore.read(Keys.token) {
+            KeychainStore.write(token, for: Keys.token)
+        }
+        if let url = KeychainStore.read(Keys.serverURL) {
+            KeychainStore.write(url, for: Keys.serverURL)
+        }
+        UserDefaults.standard.set(true, forKey: flag)
     }
 
     private func clearAuth() {
