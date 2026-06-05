@@ -145,6 +145,45 @@ final class TagNoteE2ETests: XCTestCase {
         XCTAssertTrue(dismiss.waitForNonExistence(timeout: 5), "Hiding the keyboard must remove the dismiss control")
     }
 
+    // Editing a note offers a quick-symbols row (numbers + common punctuation)
+    // above the keyboard; tapping a symbol inserts it into the note content.
+    @MainActor
+    func testEditorQuickSymbolsInsertIntoContent() async throws {
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+
+        XCTAssertTrue(app.descendants(matching: .any)["notes-screen"].waitForExistence(timeout: 20))
+
+        _ = openSidebarIfCompact()
+        let newNote = app.descendants(matching: .any)["sidebar-new-note"]
+        XCTAssertTrue(newNote.waitForExistence(timeout: 5))
+        newNote.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["editor-screen"].firstMatch.waitForExistence(timeout: 12))
+
+        // The symbols row is hidden until the content editor is focused.
+        XCTAssertFalse(app.descendants(matching: .any)["symbols-row"].exists)
+
+        let contentEditor = app.textViews.firstMatch
+        XCTAssertTrue(contentEditor.waitForExistence(timeout: 8))
+        contentEditor.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["symbols-row"].waitForExistence(timeout: 5),
+                      "Focusing the content editor must reveal the quick-symbols row")
+        capture("07-EditorSymbols")
+
+        // Tapping symbols inserts them at the cursor. Use digits, which sit at the
+        // visible start of the (horizontally scrollable) row.
+        app.buttons["symbol-5"].tap()
+        app.buttons["symbol-8"].tap()
+        app.buttons["symbol-2"].tap()
+
+        // Verify the content via the rendered preview.
+        app.buttons["Preview"].tap()
+        XCTAssertTrue(containsText("582"), "Tapped symbols must be inserted into the note content")
+    }
+
     // Compact width: opening a note ("Open note") presents the Read surface as a
     // real full-screen reader (ux_guidelines §6), not a floating card. Asserts the
     // read screen and its close control exist, and snapshots the reader.

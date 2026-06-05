@@ -1,5 +1,22 @@
 import PhotosUI
 import SwiftUI
+import UIKit
+
+extension UIResponder {
+    private weak static var capturedFirstResponder: UIResponder?
+
+    /// The current first responder, found by bouncing a no-target action through
+    /// the responder chain. Used to insert text at the cursor of the focused field.
+    static var currentFirstResponder: UIResponder? {
+        capturedFirstResponder = nil
+        UIApplication.shared.sendAction(#selector(captureFirstResponder(_:)), to: nil, from: nil, for: nil)
+        return capturedFirstResponder
+    }
+
+    @objc private func captureFirstResponder(_ sender: Any?) {
+        UIResponder.capturedFirstResponder = self
+    }
+}
 
 struct EditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -89,7 +106,12 @@ struct EditorView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                formattingBar
+                VStack(spacing: 0) {
+                    if focusedField == .content {
+                        symbolsRow
+                    }
+                    formattingBar
+                }
             }
             .onChange(of: selectedPhoto) { _, item in
                 Task { await loadPhoto(item) }
@@ -201,6 +223,39 @@ struct EditorView: View {
             && !viewModel.suggestions.contains { $0.lowercased() == normalizedDraft }
     }
 
+    // Quick-insert numbers and common punctuation (English + Chinese) so authors
+    // don't have to switch the system keyboard to its "123" plane while writing.
+    private static let quickSymbols: [String] = [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+        ".", ",", "?", "!", ":", ";", "'", "\"", "(", ")", "-", "/", "@", "#",
+        "，", "。", "？", "！", "、", "：", "；", "（", "）", "“", "”", "—", "…"
+    ]
+
+    private var symbolsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Self.quickSymbols, id: \.self) { symbol in
+                    Button {
+                        insertAtCursor(symbol)
+                    } label: {
+                        Text(symbol)
+                            .font(.system(size: 18))
+                            .frame(minWidth: 32, minHeight: 38)
+                            .background(appState.palette.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(appState.palette.text)
+                    .accessibilityIdentifier("symbol-\(symbol)")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .background(.bar)
+        .accessibilityIdentifier("symbols-row")
+    }
+
     private var formattingBar: some View {
         HStack {
             formatButton("B", systemImage: "bold") { wrapSelection(prefix: "**", suffix: "**") }
@@ -263,6 +318,18 @@ struct EditorView: View {
     private func insert(prefix: String) {
         viewModel.content += viewModel.content.hasSuffix("\n") || viewModel.content.isEmpty ? prefix : "\n\(prefix)"
         viewModel.scheduleAutosave()
+    }
+
+    // Insert text at the cursor of the focused editor. Going through the first
+    // responder keeps the caret position and selection correct; the TextEditor's
+    // binding then updates and triggers autosave. Falls back to appending.
+    private func insertAtCursor(_ text: String) {
+        if let keyInput = UIResponder.currentFirstResponder as? UIKeyInput {
+            keyInput.insertText(text)
+        } else {
+            viewModel.content += text
+            viewModel.scheduleAutosave()
+        }
     }
 
     private func wrapSelection(prefix: String, suffix: String) {
