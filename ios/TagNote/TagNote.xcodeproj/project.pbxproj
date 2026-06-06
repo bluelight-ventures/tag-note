@@ -37,8 +37,17 @@
 		8A000001000000000000001C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000140 /* GoogleSignIn */; };
 		8A00000100000000000002A1 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000201 /* ShareViewController.swift */; };
 		8A00000100000000000002A4 /* ShareMarkdownBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000204 /* ShareMarkdownBuilder.swift */; };
+		8A00000100000000000002A2 /* ShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000202 /* ShareComposeView.swift */; };
+		8A00000100000000000002A3 /* SharePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000203 /* SharePayload.swift */; };
+		8A00000100000000000002A5 /* ShareCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000205 /* ShareCredentials.swift */; };
+		8A00000100000000000002A8 /* GetPageInfo.js in Resources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000208 /* GetPageInfo.js */; };
+		8A00000100000000000002B3 /* TagNoteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000103 /* TagNoteModels.swift */; };
+		8A00000100000000000002B4 /* TagNoteAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000104 /* TagNoteAPI.swift */; };
+		8A00000100000000000002B5 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000105 /* KeychainStore.swift */; };
 		8A00000100000000000002C4 /* ShareMarkdownBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000204 /* ShareMarkdownBuilder.swift */; };
 		8A00000100000000000002D4 /* ShareMarkdownBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000214 /* ShareMarkdownBuilderTests.swift */; };
+		8A00000100000000000002C3 /* SharePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000203 /* SharePayload.swift */; };
+		8A00000100000000000002D5 /* SharePayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000215 /* SharePayloadTests.swift */; };
 		8A0000010000000000000265 /* TagNoteShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000223 /* TagNoteShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -114,7 +123,12 @@
 		8A0000010000000000000223 /* TagNoteShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TagNoteShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A0000010000000000000201 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		8A0000010000000000000204 /* ShareMarkdownBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareMarkdownBuilder.swift; sourceTree = "<group>"; };
+		8A0000010000000000000202 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
+		8A0000010000000000000203 /* SharePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePayload.swift; sourceTree = "<group>"; };
+		8A0000010000000000000205 /* ShareCredentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCredentials.swift; sourceTree = "<group>"; };
+		8A0000010000000000000208 /* GetPageInfo.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = GetPageInfo.js; sourceTree = "<group>"; };
 		8A0000010000000000000214 /* ShareMarkdownBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareMarkdownBuilderTests.swift; sourceTree = "<group>"; };
+		8A0000010000000000000215 /* SharePayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePayloadTests.swift; sourceTree = "<group>"; };
 		8A0000010000000000000206 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8A0000010000000000000207 /* TagNoteShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TagNoteShare.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -197,8 +211,12 @@
 			children = (
 				8A0000010000000000000206 /* Info.plist */,
 				8A0000010000000000000207 /* TagNoteShare.entitlements */,
+				8A0000010000000000000208 /* GetPageInfo.js */,
 				8A0000010000000000000201 /* ShareViewController.swift */,
+				8A0000010000000000000202 /* ShareComposeView.swift */,
+				8A0000010000000000000203 /* SharePayload.swift */,
 				8A0000010000000000000204 /* ShareMarkdownBuilder.swift */,
+				8A0000010000000000000205 /* ShareCredentials.swift */,
 			);
 			path = TagNoteShare;
 			sourceTree = "<group>";
@@ -211,6 +229,7 @@
 				8A0000010000000000000117 /* TagNoteViewModelTests.swift */,
 				8A0000010000000000000119 /* MarkdownDocumentTests.swift */,
 				8A0000010000000000000214 /* ShareMarkdownBuilderTests.swift */,
+				8A0000010000000000000215 /* SharePayloadTests.swift */,
 			);
 			path = TagNoteTests;
 			sourceTree = "<group>";
@@ -433,6 +452,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A00000100000000000002A8 /* GetPageInfo.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -475,6 +495,8 @@
 				8A0000010000000000000019 /* MarkdownDocumentTests.swift in Sources */,
 				8A00000100000000000002C4 /* ShareMarkdownBuilder.swift in Sources */,
 				8A00000100000000000002D4 /* ShareMarkdownBuilderTests.swift in Sources */,
+				8A00000100000000000002C3 /* SharePayload.swift in Sources */,
+				8A00000100000000000002D5 /* SharePayloadTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,7 +513,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				8A00000100000000000002A1 /* ShareViewController.swift in Sources */,
+				8A00000100000000000002A2 /* ShareComposeView.swift in Sources */,
+				8A00000100000000000002A3 /* SharePayload.swift in Sources */,
 				8A00000100000000000002A4 /* ShareMarkdownBuilder.swift in Sources */,
+				8A00000100000000000002A5 /* ShareCredentials.swift in Sources */,
+				8A00000100000000000002B3 /* TagNoteModels.swift in Sources */,
+				8A00000100000000000002B4 /* TagNoteAPI.swift in Sources */,
+				8A00000100000000000002B5 /* KeychainStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

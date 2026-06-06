@@ -2,16 +2,36 @@ import SwiftUI
 import UIKit
 
 /// Principal view controller for the Share Extension. It extracts the shared
-/// items, then hosts the SwiftUI compose UI. (Scaffold: a placeholder for now;
-/// item extraction and the compose UI are added in later commits.)
+/// items off the input items, then hosts the SwiftUI compose UI.
 final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = .systemBackground
 
-        let root = SharePlaceholderView(
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        spinner.startAnimating()
+        view.addSubview(spinner)
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+
+        let items = (extensionContext?.inputItems as? [NSExtensionItem]) ?? []
+        Task { @MainActor in
+            let payload = await SharePayload.extract(from: items)
+            spinner.removeFromSuperview()
+            self.presentComposer(for: payload)
+        }
+    }
+
+    private func presentComposer(for payload: SharePayload) {
+        let viewModel = ShareComposeViewModel(
+            payload: payload,
+            onComplete: { [weak self] in self?.complete() },
             onCancel: { [weak self] in self?.cancel() }
         )
-        let hosting = UIHostingController(rootView: root)
+        let hosting = UIHostingController(rootView: ShareComposeView(viewModel: viewModel))
         addChild(hosting)
         hosting.view.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(hosting.view)
@@ -24,30 +44,13 @@ final class ShareViewController: UIViewController {
         hosting.didMove(toParent: self)
     }
 
+    private func complete() {
+        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+
     private func cancel() {
         extensionContext?.cancelRequest(
             withError: NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError)
         )
-    }
-}
-
-private struct SharePlaceholderView: View {
-    let onCancel: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.system(size: 40, weight: .semibold))
-                Text("Share to TagNote")
-                    .font(.headline)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-            }
-        }
     }
 }

@@ -40,6 +40,8 @@
 				<key>NSExtensionActivationSupportsImageWithMaxCount</key>
 				<integer>1</integer>
 			</dict>
+			<key>NSExtensionJavaScriptPreprocessingFile</key>
+			<string>GetPageInfo</string>
 		</dict>
 	</dict>
 </dict>
