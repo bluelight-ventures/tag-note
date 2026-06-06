@@ -43,6 +43,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/tagnote-tags     ./cmd/tagno
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/tagnote-login    ./cmd/tagnote-login
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/tagnote-migrate  ./cmd/tagnote-migrate
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/tagnote-diagnose ./cmd/tagnote-diagnose
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.Version=${VERSION}" -o /out/tagnote-mcp ./cmd/tagnote-mcp
 
 FROM alpine:3.22
 

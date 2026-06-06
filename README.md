@@ -203,6 +203,53 @@ docker compose exec tagnote tagnote-delete <id>
 For remote servers, set `TAGNOTE_URL` and `TAGNOTE_TOKEN` in the environment
 where the CLI runs.
 
+## MCP Server
+
+The Docker image includes `tagnote-mcp`, a stdio Model Context Protocol server
+that lets MCP hosts search, read, create, update, pin, restore, and organize
+TagNote notes through the existing authenticated HTTP API.
+
+Required environment:
+
+| Variable | Purpose |
+| --- | --- |
+| `TAGNOTE_URL` | TagNote base URL. Defaults to `http://localhost:3000`. |
+| `TAGNOTE_TOKEN` | User JWT, for example from `tagnote-login`. |
+
+Optional safety controls:
+
+| Variable | Purpose |
+| --- | --- |
+| `TAGNOTE_MCP_READ_ONLY=1` | Register only read-only tools and resources. |
+| `TAGNOTE_MCP_ALLOW_DELETE=1` | Register soft-delete tools. Permanent delete is not exposed. |
+| `TAGNOTE_MCP_MAX_NOTES=50` | Cap notes returned by one MCP response. |
+| `TAGNOTE_MCP_MAX_CONTENT_BYTES=200000` | Cap content bytes returned by one MCP response. |
+
+Example local command from an MCP host:
+
+```json
+{
+  "command": "docker",
+  "args": [
+    "compose",
+    "exec",
+    "-T",
+    "-e",
+    "TAGNOTE_URL=http://localhost:3000",
+    "-e",
+    "TAGNOTE_TOKEN",
+    "tagnote",
+    "tagnote-mcp"
+  ],
+  "env": {
+    "TAGNOTE_TOKEN": "<user jwt>"
+  }
+}
+```
+
+See `/Users/runming/workspace/tag_note/docs/mcp_server_design.md` for the
+tool/resource design and future remote-transport plan.
+
 ## Documentation
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) - contribution workflow and standards.

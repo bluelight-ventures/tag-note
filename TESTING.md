@@ -87,6 +87,34 @@ export TAGNOTE_TOKEN="$TOKEN"
 export TAGNOTE_URL=http://localhost:3000
 ```
 
+## MCP Server Smoke Tests
+
+Build and start the test-mode stack, then obtain a JWT:
+
+```bash
+TAGNOTE_TEST_MODE=1 docker compose build
+TAGNOTE_TEST_MODE=1 docker compose up -d
+
+TOKEN=$(curl -s -X POST http://localhost:3777/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@test.com","password":"testpass123"}' | jq -r '.token')
+```
+
+Run `tagnote-mcp` through an MCP client or inspector over stdio:
+
+```bash
+docker compose exec -T \
+  -e TAGNOTE_URL=http://localhost:3000 \
+  -e TAGNOTE_TOKEN="$TOKEN" \
+  tagnote \
+  tagnote-mcp
+```
+
+The MCP process writes protocol traffic to stdout, so diagnostics must stay on
+stderr. For automated verification, use a Dockerized MCP client or inspector and
+confirm `tagnote_search_notes`, `tagnote_get_note`, and `tagnote_create_note`
+are listed. Set `TAGNOTE_MCP_READ_ONLY=1` and confirm write tools are absent.
+
 ## Frontend E2E Tests
 
 Playwright tests live in `tests/` and use `E2E_BASE_URL`.
