@@ -2,22 +2,6 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-extension UIResponder {
-    private weak static var capturedFirstResponder: UIResponder?
-
-    /// The current first responder, found by bouncing a no-target action through
-    /// the responder chain. Used to insert text at the cursor of the focused field.
-    static var currentFirstResponder: UIResponder? {
-        capturedFirstResponder = nil
-        UIApplication.shared.sendAction(#selector(captureFirstResponder(_:)), to: nil, from: nil, for: nil)
-        return capturedFirstResponder
-    }
-
-    @objc private func captureFirstResponder(_ sender: Any?) {
-        UIResponder.capturedFirstResponder = self
-    }
-}
-
 struct EditorView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
@@ -26,12 +10,9 @@ struct EditorView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showDiscardPrompt = false
     @State private var showDeletePrompt = false
-    @FocusState private var focusedField: EditorField?
-
-    private enum EditorField {
-        case tag
-        case content
-    }
+    @State private var isContentEditing = false
+    @State private var editorController = MarkdownEditorController()
+    @FocusState private var tagFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -51,14 +32,16 @@ struct EditorView: View {
                 .padding(.bottom, 8)
 
                 if viewModel.previewMode == .write {
-                    TextEditor(text: $viewModel.content)
-                        .font(.body.monospaced())
-                        .foregroundStyle(appState.palette.text)
-                        .scrollContentBackground(.hidden)
-                        .background(appState.palette.card)
-                        .focused($focusedField, equals: .content)
-                        .onChange(of: viewModel.content) { _, _ in viewModel.scheduleAutosave() }
-                        .accessibilityIdentifier("note-content-editor")
+                    MarkdownTextView(
+                        text: $viewModel.content,
+                        isFocused: $isContentEditing,
+                        controller: editorController,
+                        textColor: UIColor(appState.palette.text),
+                        tintColor: UIColor(appState.palette.accent)
+                    )
+                    .background(appState.palette.card)
+                    .onChange(of: viewModel.content) { _, _ in viewModel.scheduleAutosave() }
+                    .accessibilityIdentifier("note-content-editor")
                 } else {
                     ScrollView {
                         markdownPreview
@@ -107,7 +90,7 @@ struct EditorView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
-                    if focusedField == .content {
+                    if isContentEditing {
                         symbolsRow
                     }
                     formattingBar
@@ -168,7 +151,7 @@ struct EditorView: View {
                 TextField("Add tag", text: $tagDraft)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .focused($focusedField, equals: .tag)
+                    .focused($tagFieldFocused)
                     .onSubmit(commitTagDraft)
                     .onChange(of: tagDraft) { _, value in
                         // Commit on space, comma, or enter — matches the web chip input (ux_guidelines §12).
@@ -236,7 +219,7 @@ struct EditorView: View {
             HStack(spacing: 6) {
                 ForEach(Self.quickSymbols, id: \.self) { symbol in
                     Button {
-                        insertAtCursor(symbol)
+                        editorController.insert(symbol)
                     } label: {
                         Text(symbol)
                             .font(.system(size: 18))
@@ -258,11 +241,11 @@ struct EditorView: View {
 
     private var formattingBar: some View {
         HStack {
-            formatButton("B", systemImage: "bold") { wrapSelection(prefix: "**", suffix: "**") }
-            formatButton("I", systemImage: "italic") { wrapSelection(prefix: "*", suffix: "*") }
-            formatButton("H", systemImage: "textformat.size") { insert(prefix: "## ") }
-            formatButton("List", systemImage: "list.bullet") { insert(prefix: "- ") }
-            formatButton("Quote", systemImage: "quote.opening") { insert(prefix: "> ") }
+            formatButton("B", systemImage: "bold") { editorController.wrap(prefix: "**", suffix: "**") }
+            formatButton("I", systemImage: "italic") { editorController.wrap(prefix: "*", suffix: "*") }
+            formatButton("H", systemImage: "textformat.size") { editorController.prefixLine("## ") }
+            formatButton("List", systemImage: "list.bullet") { editorController.prefixLine("- ") }
+            formatButton("Quote", systemImage: "quote.opening") { editorController.prefixLine("> ") }
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                 Image(systemName: "photo")
                     .frame(width: 28, height: 28)
@@ -281,9 +264,10 @@ struct EditorView: View {
             } label: {
                 Image(systemName: "checkmark.circle")
             }
-            if focusedField != nil {
+            if isContentEditing || tagFieldFocused {
                 Button {
-                    focusedField = nil
+                    if isContentEditing { editorController.resignFocus() }
+                    tagFieldFocused = false
                 } label: {
                     Image(systemName: "keyboard.chevron.compact.down")
                         .frame(width: 28, height: 28)
@@ -313,28 +297,6 @@ struct EditorView: View {
     private func commitTagDraft() {
         viewModel.addTag(tagDraft)
         tagDraft = ""
-    }
-
-    private func insert(prefix: String) {
-        viewModel.content += viewModel.content.hasSuffix("\n") || viewModel.content.isEmpty ? prefix : "\n\(prefix)"
-        viewModel.scheduleAutosave()
-    }
-
-    // Insert text at the cursor of the focused editor. Going through the first
-    // responder keeps the caret position and selection correct; the TextEditor's
-    // binding then updates and triggers autosave. Falls back to appending.
-    private func insertAtCursor(_ text: String) {
-        if let keyInput = UIResponder.currentFirstResponder as? UIKeyInput {
-            keyInput.insertText(text)
-        } else {
-            viewModel.content += text
-            viewModel.scheduleAutosave()
-        }
-    }
-
-    private func wrapSelection(prefix: String, suffix: String) {
-        viewModel.content += "\(prefix)\(suffix)"
-        viewModel.scheduleAutosave()
     }
 
     private func close() {
