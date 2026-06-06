@@ -357,8 +357,8 @@ private struct SidebarView: View {
                             .font(.system(size: 13, weight: .medium))
                             .lineLimit(1)
                             .foregroundStyle(appState.palette.secondaryText)
-                        SidebarIconButton(systemName: "square.and.arrow.down", label: "Export") {}
-                        SidebarIconButton(systemName: "square.and.arrow.up", label: "Import") {}
+                        // Export/import live in the web app (desktop), where the
+                        // file system is easy to reach; iPhone/iPad omit them.
                         SidebarIconButton(systemName: "sun.max", label: "Theme") {
                             cycleTheme()
                         }
