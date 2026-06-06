@@ -11,6 +11,7 @@ struct EditorView: View {
     @State private var showDiscardPrompt = false
     @State private var showDeletePrompt = false
     @State private var isContentEditing = false
+    @State private var keyboardVisible = false
     @State private var editorController = MarkdownEditorController()
     @FocusState private var tagFieldFocused: Bool
 
@@ -88,13 +89,23 @@ struct EditorView: View {
                     }
                 }
             }
+            // The toolbar is always available (pin/save are useful outside
+            // editing too), but the numbers/symbols row belongs to the content
+            // keyboard, so only show it while that keyboard is actually up. Keying
+            // off real keyboard visibility avoids it lingering after dismissal.
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
-                    if isContentEditing {
+                    if isEditingContent {
                         symbolsRow
                     }
                     formattingBar
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                keyboardVisible = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardVisible = false
             }
             .onChange(of: selectedPhoto) { _, item in
                 Task { await loadPhoto(item) }
@@ -218,50 +229,58 @@ struct EditorView: View {
 
     private var symbolsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
+            HStack(spacing: 3) {
                 ForEach(Self.quickSymbols, id: \.self) { symbol in
                     Button {
                         editorController.insert(symbol)
                     } label: {
                         Text(symbol)
-                            .font(.system(size: 18))
-                            .frame(minWidth: 32, minHeight: 38)
+                            .font(.system(size: 16))
+                            .frame(minWidth: 24, minHeight: 33)
                             .background(appState.palette.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(appState.palette.text)
                     .accessibilityIdentifier("symbol-\(symbol)")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
         }
         .background(.bar)
         .accessibilityIdentifier("symbols-row")
     }
 
+    /// The content keyboard is up, so markdown editing controls are relevant.
+    private var isEditingContent: Bool { isContentEditing && keyboardVisible }
+
     private var formattingBar: some View {
         HStack(spacing: 6) {
-            // Formatting actions scroll horizontally so the set can grow without
-            // crowding out the fixed pin/save/dismiss controls.
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
-                    formatButton("Bold", systemImage: "bold") { editorController.toggleWrap(prefix: "**", suffix: "**") }
-                    formatButton("Italic", systemImage: "italic") { editorController.toggleWrap(prefix: "*", suffix: "*") }
-                    formatButton("Strikethrough", systemImage: "strikethrough") { editorController.toggleWrap(prefix: "~~", suffix: "~~") }
-                    formatButton("Code", systemImage: "chevron.left.forwardslash.chevron.right") { editorController.toggleWrap(prefix: "`", suffix: "`") }
-                    formatButton("Heading", systemImage: "textformat.size") { editorController.toggleLinePrefix("## ") }
-                    formatButton("Bulleted list", systemImage: "list.bullet") { editorController.toggleLinePrefix("- ") }
-                    formatButton("Numbered list", systemImage: "list.number") { editorController.toggleOrderedList() }
-                    formatButton("Quote", systemImage: "text.quote") { editorController.toggleLinePrefix("> ") }
-                    formatButton("Link", systemImage: "link") { editorController.insertLink() }
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Image(systemName: "photo")
-                            .frame(width: 28, height: 28)
+            // Formatting actions only make sense while editing the note body, so
+            // hide them when the content keyboard is down. Pin/Save stay so they
+            // remain reachable outside editing.
+            if isEditingContent {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 2) {
+                        formatButton("Bold", systemImage: "bold") { editorController.toggleWrap(prefix: "**", suffix: "**") }
+                        formatButton("Italic", systemImage: "italic") { editorController.toggleWrap(prefix: "*", suffix: "*") }
+                        formatButton("Strikethrough", systemImage: "strikethrough") { editorController.toggleWrap(prefix: "~~", suffix: "~~") }
+                        formatButton("Code", systemImage: "chevron.left.forwardslash.chevron.right") { editorController.toggleWrap(prefix: "`", suffix: "`") }
+                        formatButton("Heading", systemImage: "textformat.size") { editorController.toggleLinePrefix("## ") }
+                        formatButton("Bulleted list", systemImage: "list.bullet") { editorController.toggleLinePrefix("- ") }
+                        formatButton("Numbered list", systemImage: "list.number") { editorController.toggleOrderedList() }
+                        formatButton("Quote", systemImage: "text.quote") { editorController.toggleLinePrefix("> ") }
+                        formatButton("Link", systemImage: "link") { editorController.insertLink() }
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                            Image(systemName: "photo")
+                                .frame(width: 28, height: 28)
+                        }
+                        .accessibilityLabel("Insert image")
                     }
-                    .accessibilityLabel("Insert image")
                 }
+            } else {
+                Spacer()
             }
             Button {
                 Task { await viewModel.togglePin() }
@@ -277,7 +296,8 @@ struct EditorView: View {
                     .frame(width: 28, height: 28)
             }
             .accessibilityLabel("Save now")
-            if isContentEditing || tagFieldFocused {
+            // Only offer hide-keyboard when a keyboard is actually up.
+            if keyboardVisible && (isContentEditing || tagFieldFocused) {
                 Button {
                     if isContentEditing { editorController.resignFocus() }
                     tagFieldFocused = false
