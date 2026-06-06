@@ -103,10 +103,13 @@ final class ShareComposeViewModel: ObservableObject {
                 tags: tags,
                 pinned: false
             ))
+            // When opening the app, the controller performs the open and then
+            // completes the request (so completion doesn't cancel the open).
             if openAppAfterPost {
                 onOpenApp()
+            } else {
+                onComplete()
             }
-            onComplete()
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
