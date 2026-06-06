@@ -37,6 +37,7 @@
 		8A000001000000000000001C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 8A0000010000000000000140 /* GoogleSignIn */; };
 		8A000001000000000000001D /* SharedNoteInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011B /* SharedNoteInbox.swift */; };
 		8A000001000000000000001E /* MarkdownTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011C /* MarkdownTextEditor.swift */; };
+		8A000001000000000000001F /* SaveToTagNoteIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011D /* SaveToTagNoteIntent.swift */; };
 		8A00000100000000000002B6 /* SharedNoteInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A000001000000000000011B /* SharedNoteInbox.swift */; };
 		8A00000100000000000002A1 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000201 /* ShareViewController.swift */; };
 		8A00000100000000000002A4 /* ShareMarkdownBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0000010000000000000204 /* ShareMarkdownBuilder.swift */; };
@@ -126,6 +127,7 @@
 		8A000001000000000000011A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8A000001000000000000011B /* SharedNoteInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedNoteInbox.swift; sourceTree = "<group>"; };
 		8A000001000000000000011C /* MarkdownTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
+		8A000001000000000000011D /* SaveToTagNoteIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveToTagNoteIntent.swift; sourceTree = "<group>"; };
 		8A0000010000000000000223 /* TagNoteShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TagNoteShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A0000010000000000000201 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		8A0000010000000000000204 /* ShareMarkdownBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareMarkdownBuilder.swift; sourceTree = "<group>"; };
@@ -191,6 +193,7 @@
 				8A0000010000000000000100 /* Info.plist */,
 				8A0000010000000000000101 /* TagNoteApp.swift */,
 				8A0000010000000000000102 /* AppState.swift */,
+				8A000001000000000000011D /* SaveToTagNoteIntent.swift */,
 				8A000001000000000000011A /* PrivacyInfo.xcprivacy */,
 				8A0000010000000000000050 /* Models */,
 				8A0000010000000000000051 /* API */,
@@ -475,6 +478,7 @@
 			files = (
 				8A0000010000000000000001 /* TagNoteApp.swift in Sources */,
 				8A0000010000000000000002 /* AppState.swift in Sources */,
+				8A000001000000000000001F /* SaveToTagNoteIntent.swift in Sources */,
 				8A0000010000000000000003 /* TagNoteModels.swift in Sources */,
 				8A0000010000000000000018 /* MarkdownDocument.swift in Sources */,
 				8A0000010000000000000004 /* TagNoteAPI.swift in Sources */,
