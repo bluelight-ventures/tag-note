@@ -29,7 +29,8 @@ final class ShareViewController: UIViewController {
         let viewModel = ShareComposeViewModel(
             payload: payload,
             onComplete: { [weak self] in self?.complete() },
-            onCancel: { [weak self] in self?.cancel() }
+            onCancel: { [weak self] in self?.cancel() },
+            onOpenApp: { [weak self] in self?.openHostApp() }
         )
         let hosting = UIHostingController(rootView: ShareComposeView(viewModel: viewModel))
         addChild(hosting)
@@ -46,6 +47,22 @@ final class ShareViewController: UIViewController {
 
     private func complete() {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+    }
+
+    /// Opens the TagNote app via its URL scheme. `UIApplication.open` is
+    /// unavailable in app extensions, so walk the responder chain to whoever
+    /// implements `openURL:` (the shared UIApplication).
+    private func openHostApp() {
+        guard let url = URL(string: "tagnote://shared") else { return }
+        let selector = NSSelectorFromString("openURL:")
+        var responder: UIResponder? = self
+        while let current = responder {
+            if current.responds(to: selector) {
+                current.perform(selector, with: url)
+                return
+            }
+            responder = current.next
+        }
     }
 
     private func cancel() {

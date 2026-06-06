@@ -22,6 +22,14 @@
 				<string>com.googleusercontent.apps.561303077556-1i6849445kcri03g3tusngjouiubnhem</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.tag-note.tagnote</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tagnote</string>
+			</array>
+		</dict>
 	</array>
 	<key>GIDClientID</key>
 	<string>561303077556-1i6849445kcri03g3tusngjouiubnhem.apps.googleusercontent.com</string>

@@ -9,10 +9,18 @@ final class ShareComposeViewModel: ObservableObject {
     @Published var isPosting = false
     @Published var errorMessage: String?
     @Published private(set) var isLoggedOut = false
+    /// When on, posting opens TagNote afterwards instead of returning to the
+    /// source app. Remembered across shares.
+    @Published var openAppAfterPost: Bool {
+        didSet { UserDefaults.standard.set(openAppAfterPost, forKey: Self.openAppKey) }
+    }
+
+    private static let openAppKey = "shareOpenAppAfterPost"
 
     let payload: SharePayload
     private let onComplete: () -> Void
     private let onCancel: () -> Void
+    private let onOpenApp: () -> Void
 
     /// The Link / Full-page control only applies to web pages whose readable
     /// text was captured (Safari shares).
@@ -22,12 +30,19 @@ final class ShareComposeViewModel: ObservableObject {
         !isPosting && (isImageShare || !content.trimmed.isEmpty || !tags.isEmpty)
     }
 
-    init(payload: SharePayload, onComplete: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    init(
+        payload: SharePayload,
+        onComplete: @escaping () -> Void,
+        onCancel: @escaping () -> Void,
+        onOpenApp: @escaping () -> Void
+    ) {
         self.payload = payload
         self.onComplete = onComplete
         self.onCancel = onCancel
+        self.onOpenApp = onOpenApp
         self.content = payload.markdown(mode: .link)
         self.isLoggedOut = ShareCredentials.load() == nil
+        self.openAppAfterPost = UserDefaults.standard.bool(forKey: Self.openAppKey)
     }
 
     /// Toggling the capture mode regenerates the body from the shared page.
@@ -76,6 +91,9 @@ final class ShareComposeViewModel: ObservableObject {
                 body = ShareMarkdownBuilder.appendingImage(path: path, to: body)
             }
             _ = try await api.createNote(content: body, tags: tags)
+            if openAppAfterPost {
+                onOpenApp()
+            }
             onComplete()
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -152,6 +170,9 @@ struct ShareComposeView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+
+            Toggle("Open TagNote after posting", isOn: $viewModel.openAppAfterPost)
+                .font(.callout)
 
             if let error = viewModel.errorMessage {
                 Text(error)
