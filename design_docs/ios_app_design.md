@@ -135,7 +135,6 @@ experience:
 ### Later
 
 - Full offline editing with conflict handling.
-- Share extension for clipping text/URLs into TagNote.
 - Home screen quick action for new note.
 - Widgets for pinned or recent notes.
 - Import/export through the iOS document picker.
@@ -278,6 +277,51 @@ Support password login first. Magic link can request a link immediately, but
 token verification needs universal links or custom URL scheme work to feel
 native. Google sign-in should use the iOS Google Sign-In SDK and then submit the
 ID token to `POST /api/v1/auth/google`.
+
+## Share Extension
+
+Other apps share content into TagNote through a Share Extension target
+(`TagNoteShare`, bundle `com.tag-note.tagnote.Share`) that creates a note from
+the shared item. It activates for web URLs, plain text, and images.
+
+**How a shared web page looks.** A page is captured as a compact, link-first
+note rather than the full document, so even a huge site is a small, clean card:
+
+```
+# Page Title
+
+[host/path](https://full/url)
+
+> the text you had selected (if any)
+```
+
+The first `#` heading becomes the card title and the link is tappable. A
+**Link / Full page** toggle in the compose screen lets the user instead capture
+the page's readable text. Full-page text is only available for Safari shares
+(extracted by a JavaScript preprocessing file, `GetPageInfo.js`, which returns
+the title, canonical URL, selection, and `document.body.innerText`); v1 stores
+that text as plain paragraphs (richer HTML→Markdown is a later enhancement). A
+plain `public.url` shared from a non-Safari app has no page DOM, so it is
+link-only. Plain text becomes the note body; images are downscaled and uploaded,
+then embedded as `![](path)`.
+
+**Compose UX.** The extension shows a small compose sheet — editable content, a
+tag-chip input, the Link/Full-page toggle, and Cancel/Post — mirroring the
+tag-first app. Untagged posts get the reserved `$default` chip. Posting reuses
+`TagNoteAPI.createNote` (and `uploadImage` for images).
+
+**Auth sharing.** The extension reads the session (token + server URL) from a
+shared keychain access group (`$(AppIdentifierPrefix)com.tag-note.tagnote.shared`,
+listed in both the app and extension entitlements). The app writes credentials
+into this group on login; a one-time migration in `SessionStore` moves
+pre-existing sessions over. When no session is present, the extension shows a
+"sign in" prompt. Release builds default the server to `tag-note.com`; Debug
+builds reuse the custom server the app stored.
+
+**Code reuse.** `TagNoteAPI`, `KeychainStore`, and the model DTOs are compiled
+into the extension target directly; heavyweight app code (AppState, the SwiftUI
+app views, GoogleSignIn) is not. Pure pieces (`ShareMarkdownBuilder`,
+`SharePayload` extraction) are unit-tested in `TagNoteTests`.
 
 ## Offline Strategy
 

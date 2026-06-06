@@ -275,6 +275,116 @@ final class TagNoteE2ETests: XCTestCase {
         _ = wasCompact
     }
 
+    // Best-effort end-to-end check of the Share Extension: sign in (which seeds
+    // the shared keychain the extension reads), then drive Safari → Share →
+    // TagNote → Post, and confirm a note was created on the server.
+    //
+    // The iOS share sheet and the extension's compose UI run in separate
+    // processes whose elements are not always reachable from the test runner
+    // (and a freshly installed extension may need enabling once via "More").
+    // Each cross-process step therefore XCTSkips rather than fails, so this stays
+    // green in CI while still exercising the real flow whenever the environment
+    // cooperates (e.g. a local run with the extension enabled).
+    @MainActor
+    func testShareExtensionFromSafariCreatesNote() async throws {
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+        XCTAssertTrue(app.descendants(matching: .any)["notes-screen"].waitForExistence(timeout: 20))
+
+        let token = try await authToken()
+        let baselineNewest = try await newestNoteID(token: token)
+
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        safari.launch()
+        guard safari.wait(for: .runningForeground, timeout: 15) else {
+            throw XCTSkip("Safari did not reach the foreground.")
+        }
+        try openURLInSafari(safari, urlString: serverBaseURL.absoluteString)
+
+        guard let shareButton = firstHittable([
+            safari.buttons["ShareButton"],
+            safari.buttons["Share"],
+            safari.toolbars.buttons["Share"],
+            safari.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'share'")).firstMatch
+        ], timeout: 8) else {
+            throw XCTSkip("Safari share button was not found on this iOS version.")
+        }
+        shareButton.tap()
+
+        let tagNote = safari.descendants(matching: .any)["TagNote"].firstMatch
+        guard tagNote.waitForExistence(timeout: 8) else {
+            throw XCTSkip("TagNote was not offered in the share sheet (enable it once via More).")
+        }
+        tagNote.tap()
+
+        let post = safari.buttons["Post"].firstMatch
+        guard post.waitForExistence(timeout: 8) else {
+            throw XCTSkip("The share compose UI was not reachable from the test process.")
+        }
+        // The Post button is disabled until content/tags exist; the prefilled
+        // page note satisfies that, so wait briefly for it to enable.
+        let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: post)
+        await fulfillment(of: [enabled], timeout: 6)
+        post.tap()
+
+        try await waitForNewNote(token: token, differentFrom: baselineNewest, timeout: 20)
+    }
+
+    /// Returns the first of the candidate elements to exist within the timeout.
+    private func firstHittable(_ candidates: [XCUIElement], timeout: TimeInterval) -> XCUIElement? {
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        while Date() < deadline {
+            for candidate in candidates where candidate.exists {
+                return candidate
+            }
+            usleep(200_000)
+        }
+        return nil
+    }
+
+    private func openURLInSafari(_ safari: XCUIApplication, urlString: String) throws {
+        let address = safari.textFields["Address"].firstMatch
+        if address.waitForExistence(timeout: 6) {
+            address.tap()
+        } else {
+            let anyField = safari.textFields.firstMatch
+            guard anyField.waitForExistence(timeout: 6) else {
+                throw XCTSkip("Safari address field was not found.")
+            }
+            anyField.tap()
+        }
+        let editing = safari.textFields.firstMatch
+        guard editing.waitForExistence(timeout: 6) else {
+            throw XCTSkip("Safari address field was not editable.")
+        }
+        editing.typeText(urlString)
+        editing.typeText("\n")
+        // Give the page (and its JS-preprocessing-visible DOM) time to load.
+        _ = safari.staticTexts.firstMatch.waitForExistence(timeout: 15)
+    }
+
+    /// The id of the most-recently-created note for the test user, or nil if none.
+    private func newestNoteID(token: String) async throws -> String? {
+        var request = URLRequest(url: serverBaseURL.appending(path: "api/v1/notes"))
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try assertSuccess(response)
+        let notes = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]]
+        return notes?.first?["id"] as? String
+    }
+
+    private func waitForNewNote(token: String, differentFrom baseline: String?, timeout: TimeInterval) async throws {
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        while Date() < deadline {
+            if let newest = try await newestNoteID(token: token), newest != baseline {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        XCTFail("No new note was created on the server after sharing.")
+    }
+
     /// Opens the slide-over drawer when the layout is compact. Returns true if it
     /// opened a drawer (compact width), false if the sidebar is already persistent
     /// (regular width / iPad).
