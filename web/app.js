@@ -2177,7 +2177,8 @@ function parseTags(str) {
 function makeDefaultTagPill() {
     const pill = document.createElement('span');
     pill.className = 'tag tag-default';
-    pill.textContent = '#' + RESERVED_DEFAULT_TAG;
+    // The "$" already marks it as reserved, so no "#" prefix like user tags.
+    pill.textContent = RESERVED_DEFAULT_TAG;
     pill.title = 'Default tag (shown when a note has no tags)';
     return pill;
 }

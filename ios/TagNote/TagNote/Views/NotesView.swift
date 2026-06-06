@@ -723,7 +723,8 @@ struct DefaultTagChip: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        Text("#\(reservedDefaultTag)")
+        // The "$" already marks it as reserved, so no "#" prefix like user tags.
+        Text(reservedDefaultTag)
             .font(.system(size: 15, weight: .bold))
             .lineLimit(1)
             .padding(.horizontal, 12)
