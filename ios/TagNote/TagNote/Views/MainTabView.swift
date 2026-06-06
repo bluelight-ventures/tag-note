@@ -11,6 +11,7 @@ struct MainTabView: View {
 private struct WebStyleAppShell: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
     let api: TagNoteAPI
     let cache: LocalCache
     @StateObject private var notesViewModel: NotesViewModel
@@ -76,6 +77,17 @@ private struct WebStyleAppShell: View {
             }
             if let preset = ProcessInfo.processInfo.environment["TAGNOTE_UI_PRESELECT_TAGS"], !preset.isEmpty {
                 await notesViewModel.setTagFilters(preset.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) })
+            }
+        }
+        // Refresh when the app returns to the foreground so notes created
+        // elsewhere — e.g. via the Share Extension from another app — show up
+        // without a manual pull-to-refresh. onChange only fires on real
+        // transitions, so this does not double-run the initial .task load.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, appState.session.isAuthenticated else { return }
+            Task {
+                await notesViewModel.refresh()
+                await tagsViewModel.refresh()
             }
         }
         .sheet(item: $activeEditorSheet, onDismiss: { Task { await notesViewModel.refresh() } }) { sheet in
