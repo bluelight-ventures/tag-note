@@ -184,6 +184,45 @@ final class TagNoteE2ETests: XCTestCase {
         XCTAssertTrue(containsText("582"), "Tapped symbols must be inserted into the note content")
     }
 
+    // The formatting buttons and the numbers/symbols row belong to the content
+    // keyboard: they appear only while editing the body and hide otherwise, while
+    // Pin/Save stay available.
+    @MainActor
+    func testEditorToolbarAndSymbolsFollowKeyboard() async throws {
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+        XCTAssertTrue(app.descendants(matching: .any)["notes-screen"].waitForExistence(timeout: 20))
+
+        _ = openSidebarIfCompact()
+        let newNote = app.descendants(matching: .any)["sidebar-new-note"]
+        XCTAssertTrue(newNote.waitForExistence(timeout: 5))
+        newNote.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["editor-screen"].firstMatch.waitForExistence(timeout: 12))
+
+        let bold = app.buttons["Bold"]
+        let symbols = app.descendants(matching: .any)["symbols-row"]
+
+        // Before editing: Pin stays, but formatting + symbols are hidden.
+        XCTAssertTrue(app.buttons["Pin"].waitForExistence(timeout: 5), "Pin should always be available")
+        XCTAssertFalse(bold.waitForExistence(timeout: 2), "Formatting buttons should be hidden before editing")
+        XCTAssertFalse(symbols.exists, "The symbols row should be hidden before editing")
+
+        // Focus the body: formatting + symbols appear with the keyboard.
+        let editor = app.textViews.firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 8))
+        editor.tap()
+        XCTAssertTrue(bold.waitForExistence(timeout: 5), "Formatting buttons should appear while editing")
+        XCTAssertTrue(symbols.waitForExistence(timeout: 5), "The symbols row should appear while editing")
+        capture("08-EditorToolbar")
+
+        // Hide the keyboard: formatting + symbols go away again, Pin remains.
+        app.buttons["dismiss-keyboard-button"].tap()
+        XCTAssertTrue(bold.waitForNonExistence(timeout: 5), "Formatting buttons should hide when the keyboard is dismissed")
+        XCTAssertTrue(symbols.waitForNonExistence(timeout: 5), "The symbols row should hide when the keyboard is dismissed")
+        XCTAssertTrue(app.buttons["Pin"].exists, "Pin should remain after the keyboard is dismissed")
+    }
+
     // Compact width: opening a note ("Open note") presents the Read surface as a
     // real full-screen reader (ux_guidelines §6), not a floating card. Asserts the
     // read screen and its close control exist, and snapshots the reader.
