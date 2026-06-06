@@ -78,6 +78,7 @@ jobs:
             -scheme TagNote \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device_id }}" \
             -only-testing:TagNoteTests \
+            -only-testing:TagNoteUITests/TagNoteE2ETests/testPullToRefreshLoadsNewNotes \
             -only-testing:TagNoteUITests/TagNoteE2ETests/testShareExtensionFromSafariCreatesNote \
             -resultBundlePath "$RUNNER_TEMP/ios-results.xcresult" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
