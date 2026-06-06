@@ -12,6 +12,7 @@ private struct WebStyleAppShell: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var quickActions = QuickActionCenter.shared
     let api: TagNoteAPI
     let cache: LocalCache
     @StateObject private var notesViewModel: NotesViewModel
@@ -69,8 +70,9 @@ private struct WebStyleAppShell: View {
             await notesViewModel.loadCached()
             notesViewModel.mergeOptimistic(SharedNoteInbox.drain())
             await notesViewModel.refresh()
-            if shouldAutoOpenEditor {
+            if shouldAutoOpenEditor || quickActions.newNoteRequested {
                 didAutoOpenEditor = true
+                quickActions.newNoteRequested = false
                 activeEditorSheet = .create
             }
             if ProcessInfo.processInfo.environment["TAGNOTE_UI_OPEN_SIDEBAR"] == "1" {
@@ -93,6 +95,13 @@ private struct WebStyleAppShell: View {
                 await notesViewModel.refresh()
                 await tagsViewModel.refresh()
             }
+        }
+        // The "New note" Home Screen quick action opens the composer.
+        .onChange(of: quickActions.newNoteRequested) { _, requested in
+            guard requested else { return }
+            quickActions.newNoteRequested = false
+            selection = .notes
+            activeEditorSheet = .create
         }
         .sheet(item: $activeEditorSheet, onDismiss: { Task { await notesViewModel.refresh() } }) { sheet in
             switch sheet {
