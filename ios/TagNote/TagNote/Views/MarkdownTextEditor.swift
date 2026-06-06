@@ -71,30 +71,28 @@ final class MarkdownEditorController {
     /// places the caret between them.
     func toggleWrap(prefix: String, suffix: String) {
         guard let textView else { return }
-        let nsText = textView.text as NSString
-        let sel = textView.selectedRange
+        let text = textView.text as NSString
+        let sel = clamp(textView.selectedRange, length: text.length)
         let pLen = (prefix as NSString).length
         let sLen = (suffix as NSString).length
 
         // Markers sit just outside the selection → unwrap.
-        if sel.location >= pLen, sel.location + sel.length + sLen <= nsText.length,
-           nsText.substring(with: NSRange(location: sel.location - pLen, length: pLen)) == prefix,
-           nsText.substring(with: NSRange(location: sel.location + sel.length, length: sLen)) == suffix {
+        if sel.location >= pLen, sel.location + sel.length + sLen <= text.length,
+           text.substring(with: NSRange(location: sel.location - pLen, length: pLen)) == prefix,
+           text.substring(with: NSRange(location: sel.location + sel.length, length: sLen)) == suffix {
             let outer = NSRange(location: sel.location - pLen, length: pLen + sel.length + sLen)
-            let inner = nsText.substring(with: sel)
-            replace(textView, outer, with: inner)
-            setSelectedRange(textView, NSRange(location: outer.location, length: (inner as NSString).length))
-            notifyChanged(textView)
+            let inner = text.substring(with: sel)
+            apply(textView, range: outer, replacement: inner,
+                  selection: NSRange(location: outer.location, length: (inner as NSString).length))
             return
         }
         // Markers are inside the selection (e.g. "**hi**" selected) → unwrap.
         if sel.length >= pLen + sLen {
-            let selText = nsText.substring(with: sel) as NSString
+            let selText = text.substring(with: sel) as NSString
             if selText.hasPrefix(prefix), selText.hasSuffix(suffix) {
                 let inner = selText.substring(with: NSRange(location: pLen, length: selText.length - pLen - sLen))
-                replace(textView, sel, with: inner)
-                setSelectedRange(textView, NSRange(location: sel.location, length: (inner as NSString).length))
-                notifyChanged(textView)
+                apply(textView, range: sel, replacement: inner,
+                      selection: NSRange(location: sel.location, length: (inner as NSString).length))
                 return
             }
         }
@@ -103,73 +101,76 @@ final class MarkdownEditorController {
 
     /// Wraps the current selection with `prefix`/`suffix` (no toggle).
     func wrap(prefix: String, suffix: String) {
-        guard let textView, let range = targetRange(in: textView) else { return }
-        let selected = textView.text(in: range) ?? ""
-        textView.replace(range, withText: prefix + selected + suffix)
-        if selected.isEmpty, let caret = textView.selectedTextRange,
-           let inner = textView.position(from: caret.start, offset: -(suffix as NSString).length) {
-            textView.selectedTextRange = textView.textRange(from: inner, to: inner)
+        guard let textView else { return }
+        let text = textView.text as NSString
+        let sel = clamp(textView.selectedRange, length: text.length)
+        let selected = text.substring(with: sel)
+        let replacement = prefix + selected + suffix
+        let selection: NSRange
+        if selected.isEmpty {
+            selection = NSRange(location: sel.location + (prefix as NSString).length, length: 0)
+        } else {
+            selection = NSRange(location: sel.location, length: (replacement as NSString).length)
         }
-        notifyChanged(textView)
+        apply(textView, range: sel, replacement: replacement, selection: selection)
     }
 
     /// Adds a line prefix (heading `## `, list `- `, quote `> `) at the start of
     /// the caret's line, or removes it if already present (toggle).
     func toggleLinePrefix(_ prefix: String) {
         guard let textView else { return }
-        let nsText = textView.text as NSString
-        let caret = min(max(textView.selectedRange.location, 0), nsText.length)
-        let lineRange = nsText.lineRange(for: NSRange(location: caret, length: 0))
-        let line = nsText.substring(with: lineRange) as NSString
+        let text = textView.text as NSString
+        let caret = min(max(textView.selectedRange.location, 0), text.length)
+        let lineRange = text.lineRange(for: NSRange(location: caret, length: 0))
+        let line = text.substring(with: lineRange) as NSString
+        let pLen = (prefix as NSString).length
         if line.hasPrefix(prefix) {
-            replace(textView, NSRange(location: lineRange.location, length: (prefix as NSString).length), with: "")
+            apply(textView, range: NSRange(location: lineRange.location, length: pLen), replacement: "",
+                  selection: NSRange(location: max(caret - pLen, lineRange.location), length: 0))
         } else {
-            replace(textView, NSRange(location: lineRange.location, length: 0), with: prefix)
+            apply(textView, range: NSRange(location: lineRange.location, length: 0), replacement: prefix,
+                  selection: NSRange(location: caret + pLen, length: 0))
         }
-        notifyChanged(textView)
     }
 
     /// Toggles an ordered-list marker (`1. `) at the start of the caret's line.
     func toggleOrderedList() {
         guard let textView else { return }
-        let nsText = textView.text as NSString
-        let caret = min(max(textView.selectedRange.location, 0), nsText.length)
-        let lineRange = nsText.lineRange(for: NSRange(location: caret, length: 0))
-        let line = nsText.substring(with: lineRange)
+        let text = textView.text as NSString
+        let caret = min(max(textView.selectedRange.location, 0), text.length)
+        let lineRange = text.lineRange(for: NSRange(location: caret, length: 0))
+        let line = text.substring(with: lineRange)
         if let existing = orderedMarkerLength(line) {
-            replace(textView, NSRange(location: lineRange.location, length: existing), with: "")
+            apply(textView, range: NSRange(location: lineRange.location, length: existing), replacement: "",
+                  selection: NSRange(location: max(caret - existing, lineRange.location), length: 0))
         } else {
-            replace(textView, NSRange(location: lineRange.location, length: 0), with: "1. ")
+            apply(textView, range: NSRange(location: lineRange.location, length: 0), replacement: "1. ",
+                  selection: NSRange(location: caret + 3, length: 0))
         }
-        notifyChanged(textView)
     }
 
     /// Inserts a markdown link. The selection becomes the link text and the caret
     /// lands on the `url` placeholder (selected) so the user can paste/type it.
     func insertLink() {
-        guard let textView, let range = targetRange(in: textView) else { return }
-        let selected = textView.text(in: range) ?? ""
+        guard let textView else { return }
+        let text = textView.text as NSString
+        let sel = clamp(textView.selectedRange, length: text.length)
+        let selected = text.substring(with: sel)
         let label = selected.isEmpty ? "text" : selected
         let placeholder = selected.isEmpty ? "text" : "url"
         let inserted = "[\(label)](url)" as NSString
-        textView.replace(range, withText: inserted as String)
-
-        if let caretEnd = textView.selectedTextRange?.end {
-            let phRange = inserted.range(of: placeholder, options: .backwards)
-            let backFromEnd = inserted.length - phRange.location
-            if let start = textView.position(from: caretEnd, offset: -backFromEnd),
-               let end = textView.position(from: start, offset: phRange.length) {
-                textView.selectedTextRange = textView.textRange(from: start, to: end)
-            }
-        }
-        notifyChanged(textView)
+        let phRange = inserted.range(of: placeholder, options: .backwards)
+        apply(textView, range: sel, replacement: inserted as String,
+              selection: NSRange(location: sel.location + phRange.location, length: phRange.length))
     }
 
     /// Inserts text at the caret (used by the quick-symbols row).
     func insert(_ text: String) {
-        guard let textView, let range = targetRange(in: textView) else { return }
-        textView.replace(range, withText: text)
-        notifyChanged(textView)
+        guard let textView else { return }
+        let ns = textView.text as NSString
+        let sel = clamp(textView.selectedRange, length: ns.length)
+        apply(textView, range: sel, replacement: text,
+              selection: NSRange(location: sel.location + (text as NSString).length, length: 0))
     }
 
     func resignFocus() {
@@ -177,6 +178,23 @@ final class MarkdownEditorController {
     }
 
     // MARK: - Internals
+
+    /// Replaces `range` with `replacement`, sets the selection, and notifies the
+    /// delegate. Uses NSString/selectedRange (not UITextInput) so it behaves the
+    /// same whether or not the text view is first responder / in a window.
+    private func apply(_ textView: UITextView, range: NSRange, replacement: String, selection: NSRange) {
+        let text = (textView.text ?? "") as NSString
+        textView.text = text.replacingCharacters(in: range, with: replacement)
+        let length = (textView.text as NSString).length
+        textView.selectedRange = clamp(selection, length: length)
+        textView.delegate?.textViewDidChange?(textView)
+    }
+
+    private func clamp(_ range: NSRange, length: Int) -> NSRange {
+        let location = min(max(range.location, 0), length)
+        let maxLength = max(length - location, 0)
+        return NSRange(location: location, length: min(max(range.length, 0), maxLength))
+    }
 
     private func orderedMarkerLength(_ line: String) -> Int? {
         var digits = ""
@@ -187,27 +205,6 @@ final class MarkdownEditorController {
         let after = line.dropFirst(digits.count)
         guard after.first == ".", after.dropFirst().first == " " else { return nil }
         return digits.count + 2
-    }
-
-    private func targetRange(in textView: UITextView) -> UITextRange? {
-        textView.selectedTextRange ?? textView.textRange(from: textView.endOfDocument, to: textView.endOfDocument)
-    }
-
-    private func replace(_ textView: UITextView, _ nsRange: NSRange, with text: String) {
-        guard let start = textView.position(from: textView.beginningOfDocument, offset: nsRange.location),
-              let end = textView.position(from: start, offset: nsRange.length),
-              let range = textView.textRange(from: start, to: end) else { return }
-        textView.replace(range, withText: text)
-    }
-
-    private func setSelectedRange(_ textView: UITextView, _ nsRange: NSRange) {
-        guard let start = textView.position(from: textView.beginningOfDocument, offset: nsRange.location),
-              let end = textView.position(from: start, offset: nsRange.length) else { return }
-        textView.selectedTextRange = textView.textRange(from: start, to: end)
-    }
-
-    private func notifyChanged(_ textView: UITextView) {
-        textView.delegate?.textViewDidChange?(textView)
     }
 }
 

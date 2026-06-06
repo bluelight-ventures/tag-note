@@ -60,14 +60,14 @@ final class MarkdownEditorControllerTests: XCTestCase {
         controller.insertLink()
         XCTAssertEqual(textView.text, "[docs](url)")
         // The "url" placeholder is selected so it can be replaced by typing.
-        XCTAssertEqual(textView.text(in: textView.selectedTextRange!), "url")
+        XCTAssertEqual((textView.text as NSString).substring(with: textView.selectedRange), "url")
     }
 
     func testInsertLinkWithNoSelectionSelectsText() {
         let (controller, textView) = make("", selection: NSRange(location: 0, length: 0))
         controller.insertLink()
         XCTAssertEqual(textView.text, "[text](url)")
-        XCTAssertEqual(textView.text(in: textView.selectedTextRange!), "text")
+        XCTAssertEqual((textView.text as NSString).substring(with: textView.selectedRange), "text")
     }
 
     func testInsertPutsTextAtTheCaret() {
