@@ -275,6 +275,44 @@ final class TagNoteE2ETests: XCTestCase {
         _ = wasCompact
     }
 
+    // Pull-to-refresh loads notes created out-of-band (e.g. from another device
+    // or the Share Extension): create a note via the API after the feed has
+    // loaded — so it isn't shown yet — then pull down and confirm it appears.
+    @MainActor
+    func testPullToRefreshLoadsNewNotes() async throws {
+        app.launch()
+        configureServerIfNeeded()
+        loginIfNeeded()
+
+        let notesScreen = app.descendants(matching: .any)["notes-screen"]
+        XCTAssertTrue(notesScreen.waitForExistence(timeout: 20))
+        // Wait for the initial feed to settle (seeded welcome notes are present).
+        XCTAssertTrue(containsText("Welcome to TagNote"))
+
+        let token = try await authToken()
+        let seeded = try await createNote(token: token, index: 0)
+        // The new note is not in the feed until a refresh happens.
+        XCTAssertFalse(isTextVisible(seeded.title, timeout: 2),
+                       "A note created after load should not appear without refreshing")
+
+        pullToRefresh(notesScreen)
+
+        XCTAssertTrue(containsText(seeded.title), "Pull-to-refresh must load notes created since the last load")
+    }
+
+    private func pullToRefresh(_ element: XCUIElement) {
+        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
+        let end = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+        start.press(forDuration: 0.1, thenDragTo: end)
+    }
+
+    private func isTextVisible(_ needle: String, timeout: TimeInterval) -> Bool {
+        app.staticTexts
+            .containing(NSPredicate(format: "label CONTAINS %@", needle))
+            .firstMatch
+            .waitForExistence(timeout: timeout)
+    }
+
     // Best-effort end-to-end check of the Share Extension: sign in (which seeds
     // the shared keychain the extension reads), then drive Safari → Share →
     // TagNote → Post, and confirm a note was created on the server.
