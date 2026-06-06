@@ -58,6 +58,18 @@ final class NotesViewModel: ObservableObject {
         }
     }
 
+    /// Inserts notes handed over by the Share Extension at the top of the feed so
+    /// they appear instantly, ahead of the server refresh that reconciles them.
+    /// Deduplicates by id; a following refresh() replaces them with the canonical
+    /// server copies (and drops any that don't match the active filter).
+    func mergeOptimistic(_ incoming: [SubNote]) {
+        guard !incoming.isEmpty else { return }
+        let existing = Set(notes.map { $0.id })
+        let fresh = incoming.filter { !existing.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        notes.insert(contentsOf: fresh.reversed(), at: 0)
+    }
+
     func refreshTagFilters() async {
         do {
             let tags = try await api.listTagsDetailed()

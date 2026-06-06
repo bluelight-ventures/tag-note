@@ -90,7 +90,19 @@ final class ShareComposeViewModel: ObservableObject {
                 )
                 body = ShareMarkdownBuilder.appendingImage(path: path, to: body)
             }
-            _ = try await api.createNote(content: body, tags: tags)
+            let created = try await api.createNote(content: body, tags: tags)
+            // Hand the new note to the app so it appears immediately on next
+            // foreground, ahead of the network refresh.
+            SharedNoteInbox.append(SubNote(
+                id: created.id,
+                shortID: created.shortID,
+                content: body,
+                snippet: nil,
+                createdAt: created.createdAt,
+                updatedAt: nil,
+                tags: tags,
+                pinned: false
+            ))
             if openAppAfterPost {
                 onOpenApp()
             }

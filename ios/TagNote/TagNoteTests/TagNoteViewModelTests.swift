@@ -372,6 +372,30 @@ final class TagNoteViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notes, [])
     }
 
+    func testMergeOptimisticPrependsNewestFirstAndDeduplicates() {
+        let viewModel = NotesViewModel(api: api, cache: cache)
+        viewModel.notes = [Self.note(id: "a", shortID: "a", content: "A", tags: [])]
+
+        // Inbox order is append order (oldest → newest); merge shows newest on top.
+        viewModel.mergeOptimistic([
+            Self.note(id: "b", shortID: "b", content: "B", tags: ["x"]),
+            Self.note(id: "c", shortID: "c", content: "C", tags: []),
+            Self.note(id: "a", shortID: "a", content: "A", tags: [])  // already present
+        ])
+
+        XCTAssertEqual(viewModel.notes.map(\.id), ["c", "b", "a"])
+    }
+
+    func testSharedNoteInboxAppendAndDrain() {
+        _ = SharedNoteInbox.drain()  // start clean
+        SharedNoteInbox.append(Self.note(id: "shared-1", shortID: "shared-1", content: "Shared", tags: ["t"]))
+
+        let drained = SharedNoteInbox.drain()
+        XCTAssertEqual(drained.map(\.id), ["shared-1"])
+        XCTAssertEqual(drained.first?.tags, ["t"])
+        XCTAssertTrue(SharedNoteInbox.drain().isEmpty, "drain() must clear the inbox")
+    }
+
     private static func note(id: String, shortID: String, content: String, tags: [String], pinned: Bool = false) -> SubNote {
         SubNote(id: id, shortID: shortID, content: content, snippet: nil, createdAt: Date(timeIntervalSince1970: 0), updatedAt: nil, tags: tags, pinned: pinned)
     }

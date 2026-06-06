@@ -67,6 +67,7 @@ private struct WebStyleAppShell: View {
         }
         .task {
             await notesViewModel.loadCached()
+            notesViewModel.mergeOptimistic(SharedNoteInbox.drain())
             await notesViewModel.refresh()
             if shouldAutoOpenEditor {
                 didAutoOpenEditor = true
@@ -85,6 +86,9 @@ private struct WebStyleAppShell: View {
         // transitions, so this does not double-run the initial .task load.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, appState.session.isAuthenticated else { return }
+            // Show anything the Share Extension just created instantly, then
+            // reconcile with the server.
+            notesViewModel.mergeOptimistic(SharedNoteInbox.drain())
             Task {
                 await notesViewModel.refresh()
                 await tagsViewModel.refresh()
