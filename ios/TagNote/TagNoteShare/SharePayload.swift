@@ -99,7 +99,29 @@ extension SharePayload {
             }
         }
 
+        // 5. Fallback page title for non-Safari web shares (Chrome, Mail, etc.):
+        // those don't run GetPageInfo.js, so the title arrives on the extension
+        // item's content text / title instead. Only used when the page has no
+        // title yet and the candidate isn't just the URL.
+        if payload.kind == .webPage, isEmpty(payload.pageTitle), let title = itemProvidedTitle(items) {
+            if title != payload.url?.absoluteString {
+                payload.pageTitle = title
+            }
+        }
+
         return payload
+    }
+
+    private static func itemProvidedTitle(_ items: [NSExtensionItem]) -> String? {
+        for item in items {
+            if let title = item.attributedTitle?.string, !isEmpty(title) { return title }
+            if let content = item.attributedContentText?.string, !isEmpty(content) { return content }
+        }
+        return nil
+    }
+
+    private static func isEmpty(_ value: String?) -> Bool {
+        (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     // MARK: - Loaders
