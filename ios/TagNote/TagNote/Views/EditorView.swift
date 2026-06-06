@@ -210,8 +210,10 @@ struct EditorView: View {
     // don't have to switch the system keyboard to its "123" plane while writing.
     private static let quickSymbols: [String] = [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-        ".", ",", "?", "!", ":", ";", "'", "\"", "(", ")", "-", "/", "@", "#",
-        "，", "。", "？", "！", "、", "：", "；", "（", "）", "“", "”", "—", "…"
+        // Markdown syntax characters, up front where they're easy to reach.
+        "#", "*", "_", "`", "-", "[", "]", "(", ")", ">", "~", "|",
+        ".", ",", "?", "!", ":", ";", "'", "\"", "/", "\\", "@", "&", "+", "=",
+        "，", "。", "？", "！", "、", "：", "；", "（", "）", "“", "”", "《", "》", "—", "…"
     ]
 
     private var symbolsRow: some View {
@@ -240,18 +242,27 @@ struct EditorView: View {
     }
 
     private var formattingBar: some View {
-        HStack {
-            formatButton("B", systemImage: "bold") { editorController.wrap(prefix: "**", suffix: "**") }
-            formatButton("I", systemImage: "italic") { editorController.wrap(prefix: "*", suffix: "*") }
-            formatButton("H", systemImage: "textformat.size") { editorController.prefixLine("## ") }
-            formatButton("List", systemImage: "list.bullet") { editorController.prefixLine("- ") }
-            formatButton("Quote", systemImage: "quote.opening") { editorController.prefixLine("> ") }
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Image(systemName: "photo")
-                    .frame(width: 28, height: 28)
+        HStack(spacing: 6) {
+            // Formatting actions scroll horizontally so the set can grow without
+            // crowding out the fixed pin/save/dismiss controls.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 2) {
+                    formatButton("Bold", systemImage: "bold") { editorController.toggleWrap(prefix: "**", suffix: "**") }
+                    formatButton("Italic", systemImage: "italic") { editorController.toggleWrap(prefix: "*", suffix: "*") }
+                    formatButton("Strikethrough", systemImage: "strikethrough") { editorController.toggleWrap(prefix: "~~", suffix: "~~") }
+                    formatButton("Code", systemImage: "chevron.left.forwardslash.chevron.right") { editorController.toggleWrap(prefix: "`", suffix: "`") }
+                    formatButton("Heading", systemImage: "textformat.size") { editorController.toggleLinePrefix("## ") }
+                    formatButton("Bulleted list", systemImage: "list.bullet") { editorController.toggleLinePrefix("- ") }
+                    formatButton("Numbered list", systemImage: "list.number") { editorController.toggleOrderedList() }
+                    formatButton("Quote", systemImage: "text.quote") { editorController.toggleLinePrefix("> ") }
+                    formatButton("Link", systemImage: "link") { editorController.insertLink() }
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Image(systemName: "photo")
+                            .frame(width: 28, height: 28)
+                    }
+                    .accessibilityLabel("Insert image")
+                }
             }
-            .accessibilityLabel("Insert image")
-            Spacer()
             Button {
                 Task { await viewModel.togglePin() }
             } label: {
@@ -263,7 +274,9 @@ struct EditorView: View {
                 Task { await viewModel.saveNow() }
             } label: {
                 Image(systemName: "checkmark.circle")
+                    .frame(width: 28, height: 28)
             }
+            .accessibilityLabel("Save now")
             if isContentEditing || tagFieldFocused {
                 Button {
                     if isContentEditing { editorController.resignFocus() }
