@@ -69,22 +69,22 @@ final class ShareViewController: UIViewController {
         }
         openViaResponderChain(url)
         extensionContext?.open(url, completionHandler: nil)
-
-        // If neither path switched apps, this extension is still active and the
-        // timer fires to dismiss the sheet (no hang). If the app did open, the
-        // extension is suspended and the timer is paused, so it won't fire and
-        // won't cancel the launch.
+        // Watchdog: dismiss only if the app didn't switch (a successful launch
+        // suspends this extension, pausing the timer, so it won't cancel it).
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             self?.complete()
         }
     }
 
     private func openViaResponderChain(_ url: URL) {
+        // Find any responder that implements openURL: (the host UIApplication).
+        // Don't require an `as? UIApplication` cast — in an extension the app
+        // isn't reliably castable in the chain, which would defeat the fallback.
         let selector = NSSelectorFromString("openURL:")
         var responder: UIResponder? = self
         while let current = responder {
-            if let application = current as? UIApplication, application.responds(to: selector) {
-                application.perform(selector, with: url)
+            if current.responds(to: selector) {
+                current.perform(selector, with: url)
                 return
             }
             responder = current.next
