@@ -30,6 +30,66 @@ jobs:
       - name: Build image
         run: docker build .
 
+  ios:
+    name: iOS Tests
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build test-mode server
+        run: CGO_ENABLED=0 go build -o "$RUNNER_TEMP/tagnote-server" ./cmd/tagnote-server
+
+      - name: Start test-mode server
+        env:
+          JWT_SECRET: ios-ci-secret
+          TAGNOTE_TEST_MODE: "1"
+          ADMIN_EMAIL: test@test.com
+          OPERATIONAL_BEARER_TOKEN: ios-ci-token
+        run: |
+          mkdir -p "$RUNNER_TEMP/tagnote-data"
+          "$RUNNER_TEMP/tagnote-server" \
+            -addr :3777 \
+            -db "$RUNNER_TEMP/tagnote-data/tagnote.db" \
+            > "$RUNNER_TEMP/server.log" 2>&1 &
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3777/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "server did not start"; cat "$RUNNER_TEMP/server.log"; exit 1
+
+      - name: Select iPhone simulator
+        id: sim
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin); ids=[x['udid'] for rt,devs in d['devices'].items() if 'iOS' in rt for x in devs if x['name'].startswith('iPhone')]; print(ids[-1] if ids else '')")
+          test -n "$DEVICE_ID" || { echo 'no iPhone simulator available'; exit 1; }
+          echo "device_id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Run iOS unit + share E2E tests
+        run: |
+          xcodebuild test \
+            -project ios/TagNote/TagNote.xcodeproj \
+            -scheme TagNote \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.device_id }}" \
+            -only-testing:TagNoteTests \
+            -only-testing:TagNoteUITests/TagNoteE2ETests/testShareExtensionFromSafariCreatesNote \
+            -resultBundlePath "$RUNNER_TEMP/ios-results.xcresult" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Upload iOS result bundle
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-results
+          path: ${{ runner.temp }}/ios-results.xcresult
+          if-no-files-found: ignore
+
   e2e:
     name: Frontend E2E
     runs-on: ubuntu-latest
