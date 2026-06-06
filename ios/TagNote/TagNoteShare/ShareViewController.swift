@@ -49,37 +49,46 @@ final class ShareViewController: UIViewController {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 
-    /// Opens the TagNote app via its URL scheme. Crucially, when the open
-    /// succeeds we do NOT call `completeRequest`: completing returns control to
-    /// the source app (Chrome/Safari) and cancels the switch, which is why the
-    /// redirect appeared to do nothing. Only on failure do we try the legacy
-    /// responder-chain `openURL:` and then dismiss so the sheet isn't left open.
+    /// Opens the TagNote app via its `tagnote://` scheme.
+    ///
+    /// Pitfalls handled:
+    /// 1. **Lifecycle order** — we do NOT call `completeRequest` before/around the
+    ///    open. Completing hands control back to the source app and cancels the
+    ///    switch (this was the bug). Instead a watchdog completes *only if the
+    ///    switch didn't happen*: a successful launch suspends this extension, which
+    ///    pauses the timer, so it can't cancel the launch — it just prevents a hang.
+    /// 2. **openURL workaround** — `UIApplication.open` is unavailable in
+    ///    extensions, so we walk the responder chain to `UIApplication` and call
+    ///    `openURL:` via `perform`, and also use the public `extensionContext.open`.
+    /// 3. **URL scheme** — `tagnote://` is registered in the app's Info.plist
+    ///    (CFBundleURLTypes) and is the exact string used here.
     private func openHostApp() {
         guard let url = URL(string: "tagnote://shared") else {
             complete()
             return
         }
-        extensionContext?.open(url) { [weak self] opened in
-            guard let self else { return }
-            if opened { return }   // System is switching to TagNote — leave us be.
-            if !self.openViaResponderChain(url) {
-                self.complete()    // Couldn't open at all; dismiss the sheet.
-            }
+        openViaResponderChain(url)
+        extensionContext?.open(url, completionHandler: nil)
+
+        // If neither path switched apps, this extension is still active and the
+        // timer fires to dismiss the sheet (no hang). If the app did open, the
+        // extension is suspended and the timer is paused, so it won't fire and
+        // won't cancel the launch.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            self?.complete()
         }
     }
 
-    @discardableResult
-    private func openViaResponderChain(_ url: URL) -> Bool {
+    private func openViaResponderChain(_ url: URL) {
         let selector = NSSelectorFromString("openURL:")
         var responder: UIResponder? = self
         while let current = responder {
-            if current.responds(to: selector) {
-                current.perform(selector, with: url)
-                return true
+            if let application = current as? UIApplication, application.responds(to: selector) {
+                application.perform(selector, with: url)
+                return
             }
             responder = current.next
         }
-        return false
     }
 
     private func cancel() {
