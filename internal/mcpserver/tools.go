@@ -289,11 +289,7 @@ func (s *Server) autocompleteTags(ctx context.Context, req *mcp.CallToolRequest,
 	if err != nil {
 		return nil, tagsOutput{}, err
 	}
-	limit := in.Limit
-	if limit <= 0 || limit > s.cfg.MaxNotes {
-		limit = s.cfg.MaxNotes
-	}
-	tags, err := s.service.AutocompleteTags(ctx, userID, in.Prefix, limit)
+	tags, err := s.service.AutocompleteTags(ctx, userID, in.Prefix, s.cappedLimit(in.Limit))
 	if err != nil {
 		return nil, tagsOutput{}, err
 	}
@@ -309,10 +305,7 @@ func (s *Server) listTrash(ctx context.Context, req *mcp.CallToolRequest, _ empt
 	if err != nil {
 		return nil, notesOutput{}, err
 	}
-	if len(notes) > s.cfg.MaxNotes {
-		notes = notes[:s.cfg.MaxNotes]
-	}
-	views, truncated := noteViews(notes, true, s.cfg.MaxContentBytes)
+	views, truncated := noteViews(s.capNotes(notes), true, s.cfg.MaxContentBytes)
 	return nil, notesOutput{Notes: views, Count: len(views), ContentTruncated: truncated}, nil
 }
 
@@ -384,10 +377,7 @@ func (s *Server) setNotePinned(ctx context.Context, req *mcp.CallToolRequest, in
 		if err := s.service.TogglePin(ctx, userID, in.ID); err != nil {
 			return nil, noteOutput{}, err
 		}
-		note, err = s.service.GetNote(ctx, userID, in.ID)
-		if err != nil {
-			return nil, noteOutput{}, err
-		}
+		note.Pinned = in.Pinned
 	}
 	return nil, noteOutput{Note: noteView(*note, true)}, nil
 }

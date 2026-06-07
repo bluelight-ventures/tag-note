@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -100,9 +99,10 @@ func (s *Store) ConsumeAuthorizationCode(ctx context.Context, code string) (*Aut
 	}
 	defer tx.Rollback()
 
+	codeHash := tokenHash(code)
 	row := tx.QueryRowContext(ctx, `
 		SELECT client_id, user_id, redirect_uri, scope, code_challenge, code_challenge_method, expires_at
-		FROM oauth_authorization_codes WHERE code_hash = ?`, tokenHash(code))
+		FROM oauth_authorization_codes WHERE code_hash = ?`, codeHash)
 	var c AuthorizationCode
 	var expiresAt string
 	if err := row.Scan(&c.ClientID, &c.UserID, &c.RedirectURI, &c.Scope, &c.CodeChallenge, &c.CodeChallengeMethod, &expiresAt); err != nil {
@@ -111,7 +111,7 @@ func (s *Store) ConsumeAuthorizationCode(ctx context.Context, code string) (*Aut
 	if c.ExpiresAt, err = time.Parse(time.RFC3339Nano, expiresAt); err != nil {
 		return nil, fmt.Errorf("parse code expires_at: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM oauth_authorization_codes WHERE code_hash = ?`, tokenHash(code)); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM oauth_authorization_codes WHERE code_hash = ?`, codeHash); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -212,8 +212,4 @@ func scanTokenRecord(row *sql.Row) (*TokenRecord, error) {
 func tokenHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-func scopeList(scope string) []string {
-	return strings.Fields(scope)
 }

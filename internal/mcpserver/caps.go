@@ -73,3 +73,10 @@ func (s *Server) cappedLimit(requested int) int {
 	}
 	return requested
 }
+
+func (s *Server) capNotes(notes []model.SubNote) []model.SubNote {
+	if len(notes) > s.cfg.MaxNotes {
+		return notes[:s.cfg.MaxNotes]
+	}
+	return notes
+}

@@ -49,6 +49,9 @@ type Config struct {
 	AccessTokenTTL      time.Duration
 	RefreshTokenTTL     time.Duration
 	CodeTTL             time.Duration
+	GoogleClientID      string
+	AppleClientID       string
+	AppleRedirectURI    string
 }
 
 // Server implements the MCP OAuth 2.1 endpoints.
@@ -63,6 +66,9 @@ func NewServer(cfg Config, store *Store, authService *service.AuthService) (*Ser
 	cfg.Issuer = strings.TrimRight(strings.TrimSpace(cfg.Issuer), "/")
 	cfg.Resource = strings.TrimSpace(cfg.Resource)
 	cfg.ResourceMetadataURL = strings.TrimSpace(cfg.ResourceMetadataURL)
+	cfg.GoogleClientID = strings.TrimSpace(cfg.GoogleClientID)
+	cfg.AppleClientID = strings.TrimSpace(cfg.AppleClientID)
+	cfg.AppleRedirectURI = strings.TrimSpace(cfg.AppleRedirectURI)
 	if cfg.Issuer == "" {
 		return nil, fmt.Errorf("issuer is required")
 	}
@@ -110,6 +116,8 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/oauth/register", s.handleRegister)
 	mux.HandleFunc("/oauth/authorize", s.handleAuthorize)
 	mux.HandleFunc("/oauth/login", s.handleLogin)
+	mux.HandleFunc("/oauth/login/google", s.handleGoogleLogin)
+	mux.HandleFunc("/oauth/login/apple", s.handleAppleLogin)
 	mux.HandleFunc("/oauth/approve", s.handleApprove)
 	mux.HandleFunc("/oauth/token", s.handleToken)
 	mux.HandleFunc("/oauth/revoke", s.handleRevoke)
@@ -241,18 +249,18 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	params, err := s.validateAuthorizeRequest(r.URL.Query())
+	params, err := s.validateAuthorizeRequest(r.Context(), r.URL.Query())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	userID, ok := s.sessionUserID(r)
 	if !ok {
-		renderOAuthPage(w, "Connect TagNote MCP", loginPageData{Params: params})
+		s.renderOAuthPage(w, "Connect TagNote MCP", loginPageData{Params: params})
 		return
 	}
 	userName := userID
-	renderOAuthPage(w, "Approve TagNote MCP", consentPageData{
+	s.renderOAuthPage(w, "Approve TagNote MCP", consentPageData{
 		Params:     params,
 		ClientName: params.ClientName,
 		UserName:   userName,
@@ -269,7 +277,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-	params, err := s.validateAuthorizeRequest(r.Form)
+	params, err := s.validateAuthorizeRequest(r.Context(), r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -280,7 +288,60 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil || resp.PendingVerify {
 		data := loginPageData{Params: params, Error: "Invalid email/password or unverified email."}
-		renderOAuthPage(w, "Connect TagNote MCP", data)
+		s.renderOAuthPage(w, "Connect TagNote MCP", data)
+		return
+	}
+	s.setSessionCookie(w, resp.User.ID)
+	http.Redirect(w, r, "/oauth/authorize?"+params.Values().Encode(), http.StatusSeeOther)
+}
+
+func (s *Server) handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	params, err := s.validateAuthorizeRequest(r.Context(), r.Form)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	resp, err := s.authService.GoogleLogin(r.Context(), model.GoogleAuthRequest{
+		IDToken: strings.TrimSpace(r.Form.Get("id_token")),
+	})
+	if err != nil {
+		data := loginPageData{Params: params, Error: "Google login failed. Try again or use email and password."}
+		s.renderOAuthPage(w, "Connect TagNote MCP", data)
+		return
+	}
+	s.setSessionCookie(w, resp.User.ID)
+	http.Redirect(w, r, "/oauth/authorize?"+params.Values().Encode(), http.StatusSeeOther)
+}
+
+func (s *Server) handleAppleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	params, err := s.validateAuthorizeRequest(r.Context(), r.Form)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	resp, err := s.authService.AppleLogin(r.Context(), model.AppleAuthRequest{
+		IdentityToken: strings.TrimSpace(r.Form.Get("identity_token")),
+		FullName:      strings.TrimSpace(r.Form.Get("full_name")),
+	})
+	if err != nil {
+		data := loginPageData{Params: params, Error: "Apple login failed. Try again or use email and password."}
+		s.renderOAuthPage(w, "Connect TagNote MCP", data)
 		return
 	}
 	s.setSessionCookie(w, resp.User.ID)
@@ -296,7 +357,7 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-	params, err := s.validateAuthorizeRequest(r.Form)
+	params, err := s.validateAuthorizeRequest(r.Context(), r.Form)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -500,7 +561,7 @@ func (p authorizeParams) Values() url.Values {
 	return v
 }
 
-func (s *Server) validateAuthorizeRequest(v url.Values) (authorizeParams, error) {
+func (s *Server) validateAuthorizeRequest(ctx context.Context, v url.Values) (authorizeParams, error) {
 	p := authorizeParams{
 		ResponseType:        v.Get("response_type"),
 		ClientID:            strings.TrimSpace(v.Get("client_id")),
@@ -514,7 +575,7 @@ func (s *Server) validateAuthorizeRequest(v url.Values) (authorizeParams, error)
 	if p.ResponseType != "code" {
 		return p, fmt.Errorf("response_type=code is required")
 	}
-	client, err := s.store.FindClient(context.Background(), p.ClientID)
+	client, err := s.store.FindClient(ctx, p.ClientID)
 	if err != nil {
 		return p, fmt.Errorf("unknown client")
 	}
@@ -673,10 +734,17 @@ type consentPageData struct {
 	Scopes     []string
 }
 
-func renderOAuthPage(w http.ResponseWriter, title string, data any) {
+func (s *Server) renderOAuthPage(w http.ResponseWriter, title string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	page := oauthTemplate
-	if err := page.Execute(w, map[string]any{"Title": title, "Data": data}); err != nil {
+	if err := page.Execute(w, map[string]any{
+		"Title":            title,
+		"Data":             data,
+		"GoogleClientID":   s.cfg.GoogleClientID,
+		"AppleClientID":    s.cfg.AppleClientID,
+		"AppleRedirectURI": s.cfg.AppleRedirectURI,
+		"HasSocialLogin":   s.cfg.GoogleClientID != "" || s.cfg.AppleClientID != "",
+	}); err != nil {
 		http.Error(w, "render page", http.StatusInternalServerError)
 	}
 }
@@ -687,42 +755,183 @@ var oauthTemplate = template.Must(template.New("oauth").Parse(`<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
+{{if .GoogleClientID}}<script>window.GOOGLE_CLIENT_ID={{.GoogleClientID}};</script><script src="https://accounts.google.com/gsi/client" async defer></script>{{end}}
+{{if .AppleClientID}}<script>window.APPLE_CLIENT_ID={{.AppleClientID}};window.APPLE_REDIRECT_URI={{.AppleRedirectURI}};</script><script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>{{end}}
 <style>
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f7f7f4;color:#20201d}
-main{max-width:440px;margin:8vh auto;padding:24px}
-.panel{background:white;border:1px solid #ddd9cf;border-radius:8px;padding:24px;box-shadow:0 8px 30px rgba(30,27,22,.08)}
-h1{font-size:22px;margin:0 0 18px}
-label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
-input{box-sizing:border-box;width:100%;font:inherit;padding:10px 12px;border:1px solid #c9c3b8;border-radius:6px}
-button{font:inherit;font-weight:650;padding:10px 14px;border-radius:6px;border:1px solid #2f5b4c;background:#2f5b4c;color:white;cursor:pointer}
-.row{display:flex;gap:10px;margin-top:18px}
-.secondary{background:white;color:#3c3932;border-color:#c9c3b8}
-.error{background:#fff0f0;color:#8c1d18;border:1px solid #f0c7c3;border-radius:6px;padding:10px;margin:0 0 12px}
-.meta{color:#5d594f;font-size:14px;line-height:1.45}.scopes{padding-left:18px}
+/* Everforest Light — matches the TagNote web app default theme. */
+:root{--bg:#f3ead3;--bg-card:#fdf6e3;--text:#5c6a72;--text-secondary:#829181;--text-muted:#a6b0a0;--border:#d5c4a1;--accent:#8da101;--accent-hover:#93b259;--bg-on-accent:#fdf6e3;--tag-bg:#eae2cc;--red:#f85552;--red-bg:rgba(248,85,82,0.1);--radius:8px;--radius-sm:6px;--transition:150ms ease}
+/* Everforest Dark — follows the OS preference, like the web app. */
+@media (prefers-color-scheme:dark){:root{--bg:#272e33;--bg-card:#2d353b;--text:#d3c6aa;--text-secondary:#9da9a0;--text-muted:#7a8478;--border:#374145;--accent:#a7c080;--accent-hover:#83c092;--bg-on-accent:#272e33;--tag-bg:#374145;--red:#e67e80;--red-bg:rgba(230,126,128,0.12)}}
+*{box-sizing:border-box}
+html,body{min-height:100%;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+.auth-container{max-width:420px;margin:80px auto;padding:0 20px;text-align:center}
+.auth-brand-icon{margin-bottom:12px}
+.auth-logo{font-size:2.5rem;font-weight:800;letter-spacing:0;color:var(--text)}
+.auth-subtitle{color:var(--text-muted);font-size:14px;margin:4px 0 0}
+.auth-features{list-style:none;padding:0;margin:20px auto 0;max-width:280px;display:flex;flex-direction:column;gap:8px;text-align:left}
+.auth-features li{font-size:13px;color:var(--text-secondary)}
+.auth-form{margin-top:28px;padding:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);text-align:left}
+.auth-context{font-size:13px;color:var(--text-secondary);margin:0 0 18px;text-align:center}
+.auth-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.auth-tab{flex:1;padding:12px 16px;font-size:14px;font-weight:500;font-family:inherit;color:var(--text-secondary);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px}
+.input-group input{width:100%;padding:10px 12px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;outline:none;background:var(--bg-card);color:var(--text);transition:border-color var(--transition)}
+.input-group input:focus{border-color:var(--accent)}
+.password-input-wrapper{position:relative}
+.password-input-wrapper input{padding-right:42px}
+.password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;background:none;border:none;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:color var(--transition)}
+.password-toggle:hover{color:var(--text)}
+.btn{width:100%;min-height:44px;margin-top:8px;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-size:14px;font-weight:650;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background var(--transition),border-color var(--transition)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--bg-on-accent)}
+.btn-secondary{background:var(--bg-card);border-color:var(--border);color:var(--text)}
+.btn-google{background:var(--bg-card);border-color:var(--border);color:var(--text)}
+.btn-google:hover{background:var(--tag-bg);border-color:var(--border)}
+.btn-google svg,.btn-apple svg{flex-shrink:0}
+.btn-apple{background:#000;border-color:#000;color:#fff}
+.btn-apple:hover{background:#1a1a1a}
+.auth-divider{display:flex;align-items:center;margin:20px 0;color:var(--text-muted);font-size:13px}
+.auth-divider:before,.auth-divider:after{content:"";flex:1;border-bottom:1px solid var(--border)}
+.auth-divider span{padding:0 12px}
+.error-msg{background:var(--red-bg);color:var(--red);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:16px;font-size:13px}
+.meta{color:var(--text-secondary);font-size:14px;line-height:1.45;margin:0 0 16px}.scopes{padding-left:18px;margin-top:0}.row{display:flex;gap:10px;margin-top:18px}.row .btn{margin-top:0}
+@media (max-width:520px){.auth-container{margin:48px auto;padding:0 16px}.auth-form{padding:22px}.auth-logo{font-size:2rem}}
 </style>
 </head>
-<body><main><section class="panel">
+<body><main class="auth-container">
+<svg class="auth-brand-icon" width="48" height="48" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="var(--accent)"/><path d="M8 10.5C8 9.67 8.67 9 9.5 9H17.59c.4 0 .78.16 1.06.44l5.91 5.91a1.5 1.5 0 010 2.12l-6.21 6.21a1.5 1.5 0 01-2.12 0l-5.91-5.91A1.5 1.5 0 019.88 17H9.5A1.5 1.5 0 018 15.5V10.5z" fill="none" stroke="var(--bg-on-accent)" stroke-width="1.5"/><circle cx="12.5" cy="13" r="1.5" fill="var(--bg-on-accent)"/></svg>
+<div class="auth-logo">TagNote</div>
+<p class="auth-subtitle">Tag your thinking. Find it instantly.</p>
+{{with .Data}}{{if eq (printf "%T" .) "mcpoauth.loginPageData"}}
+<ul class="auth-features"><li>✏️ Markdown-powered notes</li><li>🏷️ Organize with tags, find with search</li><li>📱 Works offline as a PWA</li></ul>
+{{end}}{{end}}
+<section class="auth-form">
 {{with .Data}}
 {{if eq (printf "%T" .) "mcpoauth.loginPageData"}}
-<h1>Connect TagNote MCP</h1>
-{{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+<p class="auth-context">Connect TagNote MCP</p>
+<div class="auth-tabs"><button class="auth-tab active" type="button">Login</button></div>
+{{if .Error}}<div class="error-msg">{{.Error}}</div>{{end}}
 <form method="post" action="/oauth/login">
 {{template "params" .Params}}
-<label>Email</label><input name="email" type="email" autocomplete="username" required autofocus>
-<label>Password</label><input name="password" type="password" autocomplete="current-password" required>
-<div class="row"><button type="submit">Continue</button></div>
+<div class="input-group"><label for="oauth-email">Email</label><input id="oauth-email" name="email" type="email" autocomplete="username" required autofocus></div>
+<div class="input-group"><label for="oauth-password">Password</label><div class="password-input-wrapper"><input id="oauth-password" name="password" type="password" autocomplete="current-password" required><button type="button" class="password-toggle" id="oauth-password-toggle" title="Show password" aria-label="Show password"><svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div></div>
+<button class="btn btn-primary" type="submit">Login</button>
 </form>
+{{if $.HasSocialLogin}}
+<div class="auth-divider"><span>or</span></div>
+{{if $.GoogleClientID}}<button id="google-signin-btn" class="btn btn-google" type="button">
+<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+Continue with Google
+</button>{{end}}
+{{if $.AppleClientID}}<button id="apple-signin-btn" class="btn btn-apple" type="button">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.09-2.01-3.76-2.04-1.6-.16-3.12.94-3.93.94-.81 0-2.06-.92-3.39-.89-1.74.03-3.35 1.01-4.25 2.57-1.81 3.14-.46 7.79 1.3 10.34.86 1.25 1.88 2.65 3.22 2.6 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.37.81 1.39-.03 2.27-1.27 3.12-2.53.98-1.45 1.39-2.85 1.41-2.92-.03-.01-2.71-1.04-2.74-4.12zM14.6 4.5c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44z"/></svg>
+Continue with Apple
+</button>{{end}}
+<form id="oauth-google-form" method="post" action="/oauth/login/google" hidden>{{template "params" .Params}}<input id="oauth-google-token" name="id_token"></form>
+<form id="oauth-apple-form" method="post" action="/oauth/login/apple" hidden>{{template "params" .Params}}<input id="oauth-apple-token" name="identity_token"><input id="oauth-apple-full-name" name="full_name"></form>
+{{end}}
 {{else}}
-<h1>Approve TagNote MCP</h1>
+<p class="auth-context">Approve TagNote MCP</p>
 <p class="meta"><strong>{{.ClientName}}</strong> is requesting access to TagNote as <strong>{{.UserName}}</strong>.</p>
 <ul class="meta scopes">{{range .Scopes}}<li>{{.}}</li>{{end}}</ul>
 <form method="post" action="/oauth/approve">
 {{template "params" .Params}}
-<div class="row"><button name="decision" value="approve" type="submit">Approve</button><button class="secondary" name="decision" value="deny" type="submit">Deny</button></div>
+<div class="row"><button class="btn btn-primary" name="decision" value="approve" type="submit">Approve</button><button class="btn btn-secondary" name="decision" value="deny" type="submit">Deny</button></div>
 </form>
 {{end}}
 {{end}}
-</section></main></body></html>
+</section></main>
+<script>
+(function(){
+  function submitForm(formId, values){
+    var form=document.getElementById(formId);
+    if(!form)return;
+    Object.keys(values).forEach(function(key){
+      var input=form.querySelector('[name="'+key+'"]');
+      if(input)input.value=values[key]||'';
+    });
+    form.submit();
+  }
+  function setupGoogle(){
+    var clientId=window.GOOGLE_CLIENT_ID;
+    var container=document.getElementById('google-signin-btn');
+    if(!clientId||!container)return;
+    function configure(){
+      if(typeof google==='undefined'||!google.accounts)return false;
+      google.accounts.id.initialize({
+        client_id:clientId,
+        callback:function(response){submitForm('oauth-google-form',{id_token:response.credential});},
+        auto_select:false,
+        cancel_on_tap_outside:true
+      });
+      // Render Google's official button inside the styled container, matching the web app.
+      var width=container.offsetWidth||300;
+      container.innerHTML='';
+      container.style.padding='0';
+      container.style.border='none';
+      container.style.background='transparent';
+      container.style.minHeight='44px';
+      google.accounts.id.renderButton(container,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',width:width});
+      return true;
+    }
+    if(configure())return;
+    var attempts=0;
+    var timer=setInterval(function(){
+      attempts++;
+      if(configure()||attempts>=50)clearInterval(timer);
+    },100);
+  }
+  function setupApple(){
+    var clientId=window.APPLE_CLIENT_ID;
+    var button=document.getElementById('apple-signin-btn');
+    if(!clientId||!button)return;
+    function configure(){
+      if(typeof AppleID==='undefined'||!AppleID.auth)return false;
+      AppleID.auth.init({clientId:clientId,scope:'name email',redirectURI:window.APPLE_REDIRECT_URI||window.location.origin,usePopup:true});
+      return true;
+    }
+    configure();
+    button.addEventListener('click',function(){
+      if(typeof AppleID==='undefined'||!AppleID.auth)return;
+      AppleID.auth.signIn().then(function(data){
+        var token=data&&data.authorization&&data.authorization.id_token;
+        if(!token)return;
+        var fullName='';
+        if(data.user&&data.user.name)fullName=[data.user.name.firstName,data.user.name.lastName].filter(Boolean).join(' ');
+        submitForm('oauth-apple-form',{identity_token:token,full_name:fullName});
+      }).catch(function(error){
+        if(error&&(error.error==='popup_closed_by_user'||error.error==='user_cancelled_authorize'))return;
+      });
+    });
+    var attempts=0;
+    var timer=setInterval(function(){
+      attempts++;
+      if(configure()||attempts>=50)clearInterval(timer);
+    },100);
+  }
+  function setupPasswordToggle(){
+    var toggle=document.getElementById('oauth-password-toggle');
+    var input=document.getElementById('oauth-password');
+    if(!toggle||!input)return;
+    var open=toggle.querySelector('.eye-open');
+    var closed=toggle.querySelector('.eye-closed');
+    toggle.addEventListener('click',function(){
+      var show=input.type==='password';
+      input.type=show?'text':'password';
+      toggle.setAttribute('aria-label',show?'Hide password':'Show password');
+      toggle.title=show?'Hide password':'Show password';
+      if(open)open.style.display=show?'none':'';
+      if(closed)closed.style.display=show?'':'none';
+    });
+  }
+  setupGoogle();
+  setupApple();
+  setupPasswordToggle();
+})();
+</script>
+</body></html>
 {{define "params"}}
 <input type="hidden" name="response_type" value="{{.ResponseType}}">
 <input type="hidden" name="client_id" value="{{.ClientID}}">

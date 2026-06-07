@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -69,6 +70,9 @@ func main() {
 		Issuer:              cfg.PublicURL,
 		Resource:            cfg.ResourceURL(),
 		ResourceMetadataURL: cfg.ResourceMetadataURL(),
+		GoogleClientID:      webGoogleClientID(os.Getenv("GOOGLE_CLIENT_ID")),
+		AppleClientID:       os.Getenv("APPLE_WEB_CLIENT_ID"),
+		AppleRedirectURI:    mcpAppleRedirectURI(cfg.PublicURL),
 	}, mcpoauth.NewStore(store.DB()), authSvc)
 	if err != nil {
 		log.Fatalf("configure MCP OAuth: %v", err)
@@ -113,4 +117,21 @@ func main() {
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Fatalf("shutdown tagnote-mcp: %v", err)
 	}
+}
+
+func webGoogleClientID(raw string) string {
+	if i := strings.IndexByte(raw, ','); i >= 0 {
+		raw = raw[:i]
+	}
+	return strings.TrimSpace(raw)
+}
+
+func mcpAppleRedirectURI(publicURL string) string {
+	if redirectURI := strings.TrimSpace(os.Getenv("APPLE_MCP_REDIRECT_URI")); redirectURI != "" {
+		return redirectURI
+	}
+	if redirectURI := strings.TrimSpace(os.Getenv("APPLE_WEB_REDIRECT_URI")); redirectURI != "" {
+		return redirectURI
+	}
+	return strings.TrimRight(strings.TrimSpace(publicURL), "/")
 }

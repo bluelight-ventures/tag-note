@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
@@ -150,6 +152,88 @@ func TestOAuthE2EAuthorizationCodeAndRefresh(t *testing.T) {
 	}
 	if refreshed.AccessToken == "" || refreshed.RefreshToken == "" || refreshed.AccessToken == tokenResp.AccessToken {
 		t.Fatalf("invalid refreshed tokens: %#v", refreshed)
+	}
+}
+
+func TestAuthorizeLoginPageRendersTagNoteSocialAuth(t *testing.T) {
+	t.Setenv("TAGNOTE_ALLOW_DEV_SECRET", "1")
+	t.Setenv("GOOGLE_CLIENT_ID", "web-client.apps.googleusercontent.com")
+	t.Setenv("APPLE_CLIENT_ID", "com.example.tagnote.web")
+
+	ctx := context.Background()
+	sqliteRepo, err := repo.NewSQLiteRepo(t.TempDir() + "/tagnote.db")
+	if err != nil {
+		t.Fatalf("NewSQLiteRepo() error = %v", err)
+	}
+	defer sqliteRepo.Close()
+	authSvc, err := service.NewAuth(sqliteRepo, service.NewEmailService(), t.TempDir())
+	if err != nil {
+		t.Fatalf("NewAuth() error = %v", err)
+	}
+	if err := sqliteRepo.CreateUser(ctx, "mcp-social-user", "mcp-social@example.com", "hash", "MCP Social", time.Now().UTC()); err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+
+	mux := http.NewServeMux()
+	oauthServer, err := NewServer(Config{
+		Issuer:              "http://mcp.example.test",
+		Resource:            "http://mcp.example.test/mcp",
+		ResourceMetadataURL: "http://mcp.example.test/.well-known/oauth-protected-resource/mcp",
+		GoogleClientID:      "web-client.apps.googleusercontent.com",
+		AppleClientID:       "com.example.tagnote.web",
+		AppleRedirectURI:    "https://tag-note.com/app",
+	}, NewStore(sqliteRepo.DB()), authSvc)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	oauthServer.RegisterRoutes(mux)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	clientID := registerClientForTest(t, server.URL)
+	values := url.Values{
+		"response_type":         {"code"},
+		"client_id":             {clientID},
+		"redirect_uri":          {"http://127.0.0.1/callback"},
+		"scope":                 {ScopeRead + " " + ScopeWrite},
+		"state":                 {"state-123"},
+		"code_challenge":        {pkceChallenge("test-code-verifier-abcdefghijklmnopqrstuvwxyz")},
+		"code_challenge_method": {"S256"},
+		"resource":              {"http://mcp.example.test/mcp"},
+	}
+
+	resp, err := http.Get(server.URL + "/oauth/authorize?" + values.Encode())
+	if err != nil {
+		t.Fatalf("GET /oauth/authorize error = %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("authorize status = %d, want 200", resp.StatusCode)
+	}
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read authorize body: %v", err)
+	}
+	body := string(bodyBytes)
+	for _, want := range []string{
+		"TagNote",
+		"Tag your thinking. Find it instantly.",
+		"Connect TagNote MCP",
+		`class="auth-features"`,
+		"Markdown-powered notes",
+		`id="oauth-password-toggle"`,
+		`id="google-signin-btn"`,
+		"Continue with Google",
+		`id="apple-signin-btn"`,
+		"Continue with Apple",
+		`/oauth/login/google`,
+		`/oauth/login/apple`,
+		"https://accounts.google.com/gsi/client",
+		"https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("authorize body missing %q", want)
+		}
 	}
 }
 

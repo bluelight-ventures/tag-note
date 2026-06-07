@@ -96,10 +96,7 @@ func (s *Server) readResource(ctx context.Context, req *mcp.ReadResourceRequest)
 		if err != nil {
 			return nil, err
 		}
-		if len(notes) > s.cfg.MaxNotes {
-			notes = notes[:s.cfg.MaxNotes]
-		}
-		views, _ := noteViews(notes, true, s.cfg.MaxContentBytes)
+		views, _ := noteViews(s.capNotes(notes), true, s.cfg.MaxContentBytes)
 		return jsonResource(uri, notesOutput{Notes: views, Count: len(views)})
 	case "notes":
 		return s.readNoteResource(ctx, userID, uri, strings.TrimPrefix(parsed.Path, "/"))
