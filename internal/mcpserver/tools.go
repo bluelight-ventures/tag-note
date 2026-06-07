@@ -13,12 +13,12 @@ import (
 type emptyInput struct{}
 
 type searchNotesInput struct {
-	Tags           []string `json:"tags,omitempty" jsonschema:"tags that all returned notes must contain"`
-	Query          string   `json:"query,omitempty" jsonschema:"full-text search query"`
-	Limit          int      `json:"limit,omitempty" jsonschema:"maximum notes to return"`
-	Offset         int      `json:"offset,omitempty" jsonschema:"notes to skip for pagination"`
-	Sort           string   `json:"sort,omitempty" jsonschema:"optional sort value supported by TagNote"`
-	IncludeContent bool     `json:"include_content,omitempty" jsonschema:"include full note content instead of metadata/snippets only"`
+	Tags           []string `json:"tags,omitempty" jsonschema:"only notes containing ALL of these tags are returned (AND match); omit to match any tag"`
+	Query          string   `json:"query,omitempty" jsonschema:"full-text query matched against note content; combined with tags"`
+	Limit          int      `json:"limit,omitempty" jsonschema:"maximum notes to return; capped to the server limit (default 50)"`
+	Offset         int      `json:"offset,omitempty" jsonschema:"number of notes to skip, for paging through results"`
+	Sort           string   `json:"sort,omitempty" jsonschema:"sort order: \"updated\" = most recently edited first; omit for newest-created first. Pinned notes always lead."`
+	IncludeContent bool     `json:"include_content,omitempty" jsonschema:"include full note content (may be byte-truncated) instead of metadata only"`
 }
 
 type notesOutput struct {
@@ -35,19 +35,9 @@ type noteOutput struct {
 	Note NoteView `json:"note"`
 }
 
-type renderStreamInput struct {
-	Tags  []string `json:"tags,omitempty" jsonschema:"tags that all rendered notes must contain"`
-	Query string   `json:"query,omitempty" jsonschema:"full-text search query"`
-}
-
-type streamOutput struct {
-	Markdown  string `json:"markdown"`
-	Truncated bool   `json:"truncated,omitempty"`
-}
-
 type listTagsInput struct {
-	Detailed bool `json:"detailed,omitempty" jsonschema:"return detailed tag metadata instead of names only"`
-	Limit    int  `json:"limit,omitempty" jsonschema:"maximum tag names to return when detailed is false"`
+	Detailed bool `json:"detailed,omitempty" jsonschema:"return metadata per tag (status, note_count, importance, urgency) instead of names only"`
+	Limit    int  `json:"limit,omitempty" jsonschema:"maximum tag names to return; applies only when detailed is false (detailed mode returns all tags)"`
 }
 
 type listTagsOutput struct {
@@ -68,14 +58,14 @@ type tagsOutput struct {
 
 type createNoteInput struct {
 	Content string   `json:"content" jsonschema:"Markdown note content"`
-	Tags    []string `json:"tags,omitempty" jsonschema:"tags to attach to the note"`
+	Tags    []string `json:"tags,omitempty" jsonschema:"tags to attach; unknown tags are created automatically as 'unreviewed'"`
 	Pinned  bool     `json:"pinned,omitempty" jsonschema:"pin the note after creating it"`
 }
 
 type updateNoteInput struct {
 	ID      string   `json:"id" jsonschema:"full note ID or unambiguous short ID"`
-	Content *string  `json:"content,omitempty" jsonschema:"replacement Markdown note content"`
-	Tags    []string `json:"tags,omitempty" jsonschema:"replacement tag list; omit to leave tags unchanged"`
+	Content *string  `json:"content,omitempty" jsonschema:"replacement Markdown content; omit to leave content unchanged"`
+	Tags    []string `json:"tags,omitempty" jsonschema:"FULL replacement of the note's tags, not a merge: this list becomes the complete tag set. Omit to leave tags unchanged; pass [] to remove all tags. To add one tag, send the full desired list."`
 }
 
 type setPinnedInput struct {
@@ -119,7 +109,7 @@ func (s *Server) registerTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tagnote_search_notes",
 		Title:       "Search TagNote notes",
-		Description: "Search TagNote notes by tag intersection and/or full-text query.",
+		Description: "Search notes by tag intersection and/or full-text query, returning structured JSON (id, tags, metadata, and optionally content). Paginated and capped — use for programmatic access, filtering, or iterating over results.",
 		Annotations: readOnly,
 	}, s.searchNotes)
 	mcp.AddTool(server, &mcp.Tool{
@@ -129,15 +119,9 @@ func (s *Server) registerTools(server *mcp.Server) {
 		Annotations: readOnly,
 	}, s.getNote)
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "tagnote_render_stream",
-		Title:       "Render TagNote stream",
-		Description: "Render matching TagNote notes as a Markdown stream.",
-		Annotations: readOnly,
-	}, s.renderStream)
-	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tagnote_list_tags",
 		Title:       "List TagNote tags",
-		Description: "List TagNote tags as names or detailed metadata.",
+		Description: "List tags. Returns names only by default; set detailed=true for metadata (status, note_count, importance, urgency). The limit applies only in names-only mode; detailed mode returns all tags.",
 		Annotations: readOnly,
 	}, s.listTags)
 	mcp.AddTool(server, &mcp.Tool{
@@ -166,13 +150,13 @@ func (s *Server) registerTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tagnote_create_note",
 		Title:       "Create TagNote note",
-		Description: "Create a TagNote Markdown note with optional tags and pin state.",
+		Description: "Create a Markdown note with optional tags and pin state. Unknown tags are created automatically.",
 		Annotations: additive,
 	}, s.createNote)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tagnote_update_note",
 		Title:       "Update TagNote note",
-		Description: "Replace a TagNote note's content and/or tag list.",
+		Description: "Update a note's content and/or tags. Provided fields overwrite (tags are replaced as a whole set, not merged); omitted fields are left unchanged.",
 		Annotations: idempotent,
 	}, s.updateNote)
 	mcp.AddTool(server, &mcp.Tool{
@@ -190,7 +174,7 @@ func (s *Server) registerTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "tagnote_approve_tag",
 		Title:       "Approve TagNote tag",
-		Description: "Mark a TagNote tag as approved.",
+		Description: "Mark a tag as approved (curated). New tags — including ones auto-created by notes — start as 'unreviewed'; approving signals it is intentional. Does not change which notes carry the tag.",
 		Annotations: idempotent,
 	}, s.approveTag)
 	mcp.AddTool(server, &mcp.Tool{
@@ -250,19 +234,6 @@ func (s *Server) getNote(ctx context.Context, req *mcp.CallToolRequest, in getNo
 	view := noteView(*note, true)
 	view.Content, _ = capString(view.Content, s.cfg.MaxContentBytes)
 	return nil, noteOutput{Note: view}, nil
-}
-
-func (s *Server) renderStream(ctx context.Context, req *mcp.CallToolRequest, in renderStreamInput) (*mcp.CallToolResult, streamOutput, error) {
-	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
-	if err != nil {
-		return nil, streamOutput{}, err
-	}
-	md, err := s.service.RenderStream(ctx, userID, in.Tags, in.Query)
-	if err != nil {
-		return nil, streamOutput{}, err
-	}
-	md, truncated := capString(md, s.cfg.MaxContentBytes)
-	return nil, streamOutput{Markdown: md, Truncated: truncated}, nil
 }
 
 func (s *Server) listTags(ctx context.Context, req *mcp.CallToolRequest, in listTagsInput) (*mcp.CallToolResult, listTagsOutput, error) {
