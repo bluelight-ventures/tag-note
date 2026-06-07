@@ -15,6 +15,7 @@
 #   5. Update TAGNOTE_IMAGE in .env
 #   6. Restart tagnote container
 #   7. Verify health
+#   8. Verify MCP binary in released image
 #
 # Runs on: Your local development machine
 # ============================================================
@@ -42,10 +43,10 @@ header "Deploying TagNote $VERSION to production"
 
 # Step 1: Build (unless skipped)
 if [ "$SKIP_BUILD" = false ]; then
-    info "Step 1/7: Building image..."
+    info "Step 1/8: Building image..."
     "$SCRIPT_DIR/build.sh" "$VERSION"
 else
-    info "Step 1/7: Skipping build (using existing image)"
+    info "Step 1/8: Skipping build (using existing image)"
     if ! docker image inspect "${IMAGE_NAME}:${VERSION}" > /dev/null 2>&1; then
         err "Image ${IMAGE_NAME}:${VERSION} not found locally. Run build first."
         exit 1
@@ -54,14 +55,14 @@ fi
 
 # Step 2: Save image to tarball
 header "Transferring image to server"
-info "Step 2/7: Saving image to tarball..."
+info "Step 2/8: Saving image to tarball..."
 TARBALL="/tmp/tagnote-${VERSION}.tar"
 docker save "${IMAGE_NAME}:${VERSION}" -o "$TARBALL"
 TARBALL_SIZE=$(ls -lh "$TARBALL" | awk '{print $5}')
 info "Tarball size: $TARBALL_SIZE"
 
 # Step 3: Transfer via SSH (with progress if pv available)
-info "Step 3/7: Transferring to ${DEPLOY_HOST}..."
+info "Step 3/8: Transferring to ${DEPLOY_HOST}..."
 TRANSFER_START=$(date +%s)
 if command -v pv &> /dev/null; then
     pv "$TARBALL" | ssh "$DEPLOY_HOST" "docker load"
@@ -76,11 +77,11 @@ ok "Transfer completed in ${TRANSFER_TIME}s"
 rm -f "$TARBALL"
 
 # Step 4: Tag the image on server
-info "Step 4/7: Tagging image on server..."
+info "Step 4/8: Tagging image on server..."
 ssh "$DEPLOY_HOST" "docker tag ${IMAGE_NAME}:${VERSION} ${IMAGE_NAME}:latest"
 
 # Step 5: Save current image and configs for rollback, then update
-info "Step 5/7: Updating server configuration..."
+info "Step 5/8: Updating server configuration..."
 ssh "$DEPLOY_HOST" "
     cd ${PROD_DIR}
 
@@ -112,7 +113,7 @@ scp "$PROJECT_DIR/Caddyfile" "${DEPLOY_HOST}:${PROD_DIR}/Caddyfile"
 ok "Server .env updated, configs copied, rollback files saved"
 
 # Step 6: Restart container and reconnect to monitoring network
-info "Step 6/7: Restarting tagnote container..."
+info "Step 6/8: Restarting tagnote container..."
 ssh "$DEPLOY_HOST" "
     cd ${PROD_DIR}
     docker compose up -d tagnote
@@ -126,7 +127,7 @@ ssh "$DEPLOY_HOST" "
 ok "Container restarted"
 
 # Step 7: Health verification
-info "Step 7/7: Verifying deployment..."
+info "Step 7/8: Verifying deployment..."
 sleep 3
 
 MAX_RETRIES=10
@@ -148,6 +149,9 @@ for i in $(seq 1 $MAX_RETRIES); do
             echo ""
             echo "  Version:  $REPORTED_VERSION"
             echo "  URL:      https://${TAGNOTE_DOMAIN}"
+            echo ""
+            info "Step 8/8: Verifying MCP binary..."
+            "$SCRIPT_DIR/verify_mcp.sh" prod "${IMAGE_NAME}:${VERSION}"
             echo ""
             ok "Deploy complete."
             exit 0

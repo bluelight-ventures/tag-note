@@ -85,6 +85,8 @@ else
     warn "Could not verify staging version (got: $REPORTED_VERSION)"
 fi
 
+"$SCRIPT_DIR/verify_mcp.sh" staging "${IMAGE_NAME}:${VERSION}"
+
 # Get server IP for staging URL
 SERVER_IP=$(ssh "$DEPLOY_HOST" "hostname -I | awk '{print \$1}'" 2>/dev/null || echo "SERVER_IP")
 

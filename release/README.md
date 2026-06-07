@@ -21,6 +21,7 @@ Builds derive their version from the explicit script argument or from Git tags.
 | `release/setup.sh` | Local machine | First-time server directory and config setup. |
 | `release/deploy.sh` | Local machine | Build, transfer over SSH, restart, and verify production. |
 | `release/promote-staging.sh` | Local machine | Deploy to the staging Compose stack. |
+| `release/verify_mcp.sh` | Local machine | Verify the released image contains a working `tagnote-mcp` binary. |
 | `release/rollback.sh` | Local machine | Restore the previous or specified image. |
 | `release/status.sh` | Local machine | Check production health and container status. |
 | `release/dashboard.sh` | Local machine | Show an operator dashboard. |
@@ -73,8 +74,9 @@ To build and deploy production in one step:
 
 ## Deployment Model
 
-The scripts build a Docker image locally and transfer it directly to the server
-over SSH. No container registry is required.
+The web app, CLI tools, and stdio MCP server ship in one Docker image. The
+scripts build that image locally and transfer it directly to the server over
+SSH. No container registry is required.
 
 ```text
 local Docker build
@@ -84,6 +86,17 @@ local Docker build
   -> update TAGNOTE_IMAGE in .env
   -> docker compose up -d tagnote
   -> verify /healthz
+  -> verify tagnote-mcp in the released image
+```
+
+`tagnote-mcp` is not a long-running production HTTP service. It is a stdio MCP
+binary intended to be launched by an MCP host, with `TAGNOTE_URL` pointed at the
+production site and `TAGNOTE_TOKEN` set to a user JWT.
+
+To verify the MCP binary independently:
+
+```bash
+./release/verify_mcp.sh prod
 ```
 
 ## Rollback

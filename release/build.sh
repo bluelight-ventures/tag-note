@@ -68,9 +68,20 @@ if [ "$LOCAL_ARCH" = "x86_64" ]; then
         warn "Smoke test: expected version '$VERSION', got '$REPORTED_VERSION'"
         warn "Status response: $STATUS"
     fi
+
+    info "Verifying MCP binary..."
+    MCP_HELP=$(docker run --rm --entrypoint tagnote-mcp "${IMAGE_NAME}:${VERSION}" -h 2>&1 || true)
+    if echo "$MCP_HELP" | grep -q -- "-base-url" && echo "$MCP_HELP" | grep -q -- "-read-only"; then
+        ok "MCP smoke test passed: tagnote-mcp starts"
+    else
+        err "MCP smoke test failed"
+        echo "$MCP_HELP"
+        exit 1
+    fi
 else
     info "Skipping local smoke test (built for amd64, running on $LOCAL_ARCH)"
     info "Smoke test will run on the server after deploy"
+    info "Skipping local MCP smoke test (built for amd64, running on $LOCAL_ARCH)"
 fi
 
 echo ""
