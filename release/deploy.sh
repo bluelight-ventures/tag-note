@@ -15,7 +15,7 @@
 #   5. Update TAGNOTE_IMAGE in .env
 #   6. Restart tagnote container
 #   7. Verify health
-#   8. Verify MCP binary in released image
+#   8. Verify MCP endpoint
 #
 # Runs on: Your local development machine
 # ============================================================
@@ -150,8 +150,8 @@ for i in $(seq 1 $MAX_RETRIES); do
             echo "  Version:  $REPORTED_VERSION"
             echo "  URL:      https://${TAGNOTE_DOMAIN}"
             echo ""
-            info "Step 8/8: Verifying MCP binary..."
-            "$SCRIPT_DIR/verify_mcp.sh" prod "${IMAGE_NAME}:${VERSION}"
+            info "Step 8/8: Verifying MCP endpoint..."
+            "$SCRIPT_DIR/verify_mcp.sh" prod
             echo ""
             ok "Deploy complete."
             exit 0

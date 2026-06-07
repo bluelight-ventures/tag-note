@@ -74,7 +74,7 @@ To build and deploy production in one step:
 
 ## Deployment Model
 
-The web app, CLI tools, and stdio MCP server ship in one Docker image. The
+The web app, CLI tools, and HTTP MCP service ship in one Docker image. The
 scripts build that image locally and transfer it directly to the server over
 SSH. No container registry is required.
 
@@ -86,14 +86,20 @@ local Docker build
   -> update TAGNOTE_IMAGE in .env
   -> docker compose up -d tagnote
   -> verify /healthz
-  -> verify tagnote-mcp in the released image
+  -> verify https://mcp.tag-note.com/mcp
 ```
 
-`tagnote-mcp` is not a long-running production HTTP service. It is a stdio MCP
-binary intended to be launched by an MCP host, with `TAGNOTE_URL` pointed at the
-production site and `TAGNOTE_TOKEN` set to a user JWT.
+The production MCP endpoint is:
 
-To verify the MCP binary independently:
+```text
+https://mcp.tag-note.com/mcp
+```
+
+Native MCP OAuth 2.1 authorization with browser-based login and secure callback
+handling is not implemented yet. Until that exists, MCP clients must send a
+TagNote bearer token explicitly.
+
+To verify the MCP endpoint independently:
 
 ```bash
 ./release/verify_mcp.sh prod

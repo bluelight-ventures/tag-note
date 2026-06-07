@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================
-# [LOCAL] Verify the TagNote MCP binary in a released Docker image
+# [LOCAL] Verify the TagNote MCP endpoint for a released deployment
 #
 # Usage:
-#   ./release/verify_mcp.sh                  # production, image from .env
-#   ./release/verify_mcp.sh prod             # production, image from .env
-#   ./release/verify_mcp.sh staging          # staging, image from .env
-#   ./release/verify_mcp.sh prod tagnote:v1  # explicit image
+#   ./release/verify_mcp.sh                  # production
+#   ./release/verify_mcp.sh prod             # production
+#   ./release/verify_mcp.sh staging          # staging
 #
 # Runs on: Your local development machine (SSHes into server)
 # ============================================================
@@ -16,15 +15,15 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
 ENVIRONMENT="${1:-prod}"
-IMAGE="${2:-}"
-
 case "$ENVIRONMENT" in
     prod|production)
         TARGET_DIR="$PROD_DIR"
+        MCP_URL="https://mcp.tag-note.com/mcp"
         ENVIRONMENT="prod"
         ;;
     staging)
         TARGET_DIR="$STAGING_DIR"
+        MCP_URL="http://localhost:3779/mcp"
         ;;
     *)
         err "Unknown environment: $ENVIRONMENT"
@@ -33,43 +32,26 @@ case "$ENVIRONMENT" in
         ;;
 esac
 
-header "Verifying TagNote MCP ($ENVIRONMENT)"
-
-if [ -z "$IMAGE" ]; then
-    info "Reading TAGNOTE_IMAGE from ${TARGET_DIR}/.env..."
-    IMAGE=$(ssh "$DEPLOY_HOST" "grep -s '^TAGNOTE_IMAGE=' ${TARGET_DIR}/.env | cut -d= -f2- || true")
-fi
-
-if [ -z "$IMAGE" ]; then
-    IMAGE="${IMAGE_NAME}:latest"
-    warn "TAGNOTE_IMAGE not found; falling back to ${IMAGE}"
-fi
+header "Verifying TagNote MCP endpoint ($ENVIRONMENT)"
 
 info "Target: ${DEPLOY_HOST}:${TARGET_DIR}"
-info "Image:  ${IMAGE}"
+info "URL:    ${MCP_URL}"
 
-ssh "$DEPLOY_HOST" "docker image inspect '${IMAGE}' >/dev/null"
-ok "Image exists on server"
-
-HELP_OUTPUT=$(ssh "$DEPLOY_HOST" "docker run --rm --entrypoint tagnote-mcp '${IMAGE}' -h 2>&1" || true)
-if echo "$HELP_OUTPUT" | grep -q -- "-base-url" && echo "$HELP_OUTPUT" | grep -q -- "-read-only"; then
-    ok "tagnote-mcp binary starts and exposes expected flags"
+STATUS=$(ssh "$DEPLOY_HOST" "curl -sS -o /tmp/tagnote-mcp-verify-body -w '%{http_code}' '${MCP_URL}' 2>/tmp/tagnote-mcp-verify-err || true")
+if [ "$STATUS" = "401" ] || [ "$STATUS" = "405" ] || [ "$STATUS" = "406" ] || [ "$STATUS" = "415" ]; then
+    ok "MCP endpoint is reachable and not publicly usable without a valid MCP request"
 else
     err "tagnote-mcp verification failed"
-    echo "$HELP_OUTPUT"
+    echo "HTTP status: ${STATUS:-none}"
+    ssh "$DEPLOY_HOST" "cat /tmp/tagnote-mcp-verify-err /tmp/tagnote-mcp-verify-body 2>/dev/null || true"
     exit 1
 fi
 
 cat <<EOF
 
-Codex production MCP command template:
+Codex production MCP URL:
 
-  TAGNOTE_TOKEN=<user-jwt> \\
-  docker run --rm -i \\
-    --entrypoint tagnote-mcp \\
-    -e TAGNOTE_URL=https://${TAGNOTE_DOMAIN} \\
-    -e TAGNOTE_TOKEN \\
-    ${IMAGE}
+  https://mcp.tag-note.com/mcp
 
 EOF
 

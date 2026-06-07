@@ -205,16 +205,23 @@ where the CLI runs.
 
 ## MCP Server
 
-The Docker image includes `tagnote-mcp`, a stdio Model Context Protocol server
-that lets MCP hosts search, read, create, update, pin, restore, and organize
-TagNote notes through the existing authenticated HTTP API.
+TagNote's MCP endpoint is planned as a long-running Streamable HTTP service at:
 
-Required environment:
+```text
+https://mcp.tag-note.com/mcp
+```
 
-| Variable | Purpose |
-| --- | --- |
-| `TAGNOTE_URL` | TagNote base URL. Defaults to `http://localhost:3000`. |
-| `TAGNOTE_TOKEN` | User JWT, for example from `tagnote-login`. |
+It lets MCP hosts search, read, create, update, pin, restore, and organize
+TagNote notes through the existing authenticated API.
+
+Authentication:
+
+```http
+Authorization: Bearer <TagNote JWT>
+```
+
+Native MCP OAuth 2.1 authorization with browser-based login and secure callback
+handling is not implemented yet.
 
 Optional safety controls:
 
@@ -225,30 +232,11 @@ Optional safety controls:
 | `TAGNOTE_MCP_MAX_NOTES=50` | Cap notes returned by one MCP response. |
 | `TAGNOTE_MCP_MAX_CONTENT_BYTES=200000` | Cap content bytes returned by one MCP response. |
 
-Example local command from an MCP host:
-
-```json
-{
-  "command": "docker",
-  "args": [
-    "compose",
-    "exec",
-    "-T",
-    "-e",
-    "TAGNOTE_URL=http://localhost:3000",
-    "-e",
-    "TAGNOTE_TOKEN",
-    "tagnote",
-    "tagnote-mcp"
-  ],
-  "env": {
-    "TAGNOTE_TOKEN": "<user jwt>"
-  }
-}
-```
+Local development should use the same HTTP MCP interface as production, with a
+local URL such as `http://localhost:3779/mcp`.
 
 See `/Users/runming/workspace/tag_note/docs/mcp_server_design.md` for the
-tool/resource design and future remote-transport plan.
+tool/resource design and HTTP transport plan.
 
 ## Documentation
 
