@@ -5,8 +5,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/runminglu/tag-note/internal/apiclient"
 )
 
 const (
@@ -16,8 +14,11 @@ const (
 
 // Config controls the TagNote MCP server.
 type Config struct {
-	BaseURL         string
-	Token           string
+	Addr            string
+	DBPath          string
+	UploadsDir      string
+	PublicURL       string
+	ResourcePath    string
 	ReadOnly        bool
 	AllowDelete     bool
 	MaxNotes        int
@@ -27,8 +28,11 @@ type Config struct {
 // ConfigFromEnv reads MCP configuration from environment variables.
 func ConfigFromEnv() Config {
 	return Config{
-		BaseURL:         envString("TAGNOTE_URL", apiclient.BaseURL()),
-		Token:           os.Getenv("TAGNOTE_TOKEN"),
+		Addr:            envString("TAGNOTE_MCP_ADDR", ":3001"),
+		DBPath:          envString("TAGNOTE_DB", "/data/tagnote.db"),
+		UploadsDir:      envString("TAGNOTE_UPLOADS", "/data/uploads"),
+		PublicURL:       envString("TAGNOTE_MCP_PUBLIC_URL", "http://localhost:3779"),
+		ResourcePath:    envString("TAGNOTE_MCP_RESOURCE_PATH", "/mcp"),
 		ReadOnly:        envBool("TAGNOTE_MCP_READ_ONLY", false),
 		AllowDelete:     envBool("TAGNOTE_MCP_ALLOW_DELETE", false),
 		MaxNotes:        envInt("TAGNOTE_MCP_MAX_NOTES", defaultMaxNotes),
@@ -38,12 +42,25 @@ func ConfigFromEnv() Config {
 
 // Validate checks required settings and fills conservative defaults.
 func (c *Config) Validate() error {
-	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
-	if c.BaseURL == "" {
-		c.BaseURL = apiclient.BaseURL()
+	c.Addr = strings.TrimSpace(c.Addr)
+	if c.Addr == "" {
+		c.Addr = ":3001"
 	}
-	if strings.TrimSpace(c.Token) == "" {
-		return fmt.Errorf("TAGNOTE_TOKEN is required")
+	c.DBPath = strings.TrimSpace(c.DBPath)
+	if c.DBPath == "" {
+		return fmt.Errorf("TAGNOTE_DB is required")
+	}
+	c.UploadsDir = strings.TrimSpace(c.UploadsDir)
+	if c.UploadsDir == "" {
+		c.UploadsDir = "/data/uploads"
+	}
+	c.PublicURL = strings.TrimRight(strings.TrimSpace(c.PublicURL), "/")
+	if c.PublicURL == "" {
+		return fmt.Errorf("TAGNOTE_MCP_PUBLIC_URL is required")
+	}
+	c.ResourcePath = "/" + strings.Trim(strings.TrimSpace(c.ResourcePath), "/")
+	if c.ResourcePath == "/" {
+		c.ResourcePath = "/mcp"
 	}
 	if c.MaxNotes <= 0 {
 		c.MaxNotes = defaultMaxNotes
@@ -52,6 +69,14 @@ func (c *Config) Validate() error {
 		c.MaxContentBytes = defaultMaxContentBytes
 	}
 	return nil
+}
+
+func (c Config) ResourceURL() string {
+	return strings.TrimRight(c.PublicURL, "/") + c.ResourcePath
+}
+
+func (c Config) ResourceMetadataURL() string {
+	return strings.TrimRight(c.PublicURL, "/") + "/.well-known/oauth-protected-resource" + c.ResourcePath
 }
 
 func envString(name, fallback string) string {

@@ -21,6 +21,36 @@ services:
     networks:
       - tagnote-dev
 
+  tagnote-mcp:
+    build: .
+    entrypoint: ["tagnote-mcp"]
+    command:
+      - "-addr"
+      - ":3001"
+      - "-db"
+      - "/data/tagnote.db"
+      - "-uploads"
+      - "/data/uploads"
+      - "-public-url"
+      - "http://localhost:3779"
+    ports:
+      - "3779:3001"
+    volumes:
+      - tagnote-data:/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-tagnote-dev-secret}
+      - TAGNOTE_TEST_MODE=${TAGNOTE_TEST_MODE:-0}
+      - TAGNOTE_ALLOW_DEV_SECRET=${TAGNOTE_ALLOW_DEV_SECRET:-1}
+      - TAGNOTE_MCP_ALLOW_DELETE=${TAGNOTE_MCP_ALLOW_DELETE:-0}
+    restart: unless-stopped
+    networks:
+      - tagnote-dev
+    depends_on:
+      - tagnote
+
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.106.1
     restart: unless-stopped
@@ -63,6 +93,7 @@ services:
       - tagnote-dev
     depends_on:
       - tagnote
+      - tagnote-mcp
       - grafana
 
 volumes:

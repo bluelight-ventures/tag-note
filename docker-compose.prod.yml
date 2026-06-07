@@ -27,6 +27,7 @@ services:
       - caddy-config:/config
     depends_on:
       - tagnote
+      - tagnote-mcp
     networks:
       - default
       - monitoring
@@ -58,6 +59,41 @@ services:
       - EMAIL_FROM=${EMAIL_FROM:-noreply@example.com}
       # Admin configuration
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+      - monitoring
+
+  tagnote-mcp:
+    image: ${TAGNOTE_IMAGE:-tagnote:latest}
+    restart: unless-stopped
+    entrypoint: ["tagnote-mcp"]
+    command:
+      - "-addr"
+      - ":3001"
+      - "-db"
+      - "/data/tagnote.db"
+      - "-uploads"
+      - "/data/uploads"
+      - "-public-url"
+      - "https://mcp.${TAGNOTE_DOMAIN:?set TAGNOTE_DOMAIN in .env}"
+    expose:
+      - "3001"
+    volumes:
+      - ./data:/data
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}
+      - BASE_URL=https://${TAGNOTE_DOMAIN:?set TAGNOTE_DOMAIN in .env}
+      - TAGNOTE_MCP_ALLOW_DELETE=${TAGNOTE_MCP_ALLOW_DELETE:-0}
+      - AWS_SES_ACCESS_KEY=${AWS_SES_ACCESS_KEY:-}
+      - AWS_SES_SECRET_KEY=${AWS_SES_SECRET_KEY:-}
+      - AWS_SES_REGION=${AWS_SES_REGION:-us-east-1}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@example.com}
     security_opt:
       - no-new-privileges:true
     networks:

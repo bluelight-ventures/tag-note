@@ -6,6 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/runminglu/tag-note/internal/mcpoauth"
 	"github.com/runminglu/tag-note/internal/model"
 )
 
@@ -221,8 +222,12 @@ func (s *Server) registerTools(server *mcp.Server) {
 	}
 }
 
-func (s *Server) searchNotes(ctx context.Context, _ *mcp.CallToolRequest, in searchNotesInput) (*mcp.CallToolResult, notesOutput, error) {
-	notes, err := s.client.ListNotes(ctx, in.Tags, in.Query, s.cappedLimit(in.Limit), in.Offset, in.Sort)
+func (s *Server) searchNotes(ctx context.Context, req *mcp.CallToolRequest, in searchNotesInput) (*mcp.CallToolResult, notesOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, notesOutput{}, err
+	}
+	notes, err := s.service.ReadNotes(ctx, userID, in.Tags, in.Query, s.cappedLimit(in.Limit), in.Offset, in.Sort)
 	if err != nil {
 		return nil, notesOutput{}, err
 	}
@@ -230,11 +235,15 @@ func (s *Server) searchNotes(ctx context.Context, _ *mcp.CallToolRequest, in sea
 	return nil, notesOutput{Notes: views, Count: len(views), ContentTruncated: truncated}, nil
 }
 
-func (s *Server) getNote(ctx context.Context, _ *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, noteOutput, error) {
+func (s *Server) getNote(ctx context.Context, req *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, noteOutput, error) {
 	if in.ID == "" {
 		return nil, noteOutput{}, fmt.Errorf("id is required")
 	}
-	note, err := s.client.GetNote(ctx, in.ID)
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, noteOutput{}, err
+	}
+	note, err := s.service.GetNote(ctx, userID, in.ID)
 	if err != nil {
 		return nil, noteOutput{}, err
 	}
@@ -243,8 +252,12 @@ func (s *Server) getNote(ctx context.Context, _ *mcp.CallToolRequest, in getNote
 	return nil, noteOutput{Note: view}, nil
 }
 
-func (s *Server) renderStream(ctx context.Context, _ *mcp.CallToolRequest, in renderStreamInput) (*mcp.CallToolResult, streamOutput, error) {
-	md, err := s.client.RenderStream(ctx, in.Tags, in.Query)
+func (s *Server) renderStream(ctx context.Context, req *mcp.CallToolRequest, in renderStreamInput) (*mcp.CallToolResult, streamOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, streamOutput{}, err
+	}
+	md, err := s.service.RenderStream(ctx, userID, in.Tags, in.Query)
 	if err != nil {
 		return nil, streamOutput{}, err
 	}
@@ -252,35 +265,47 @@ func (s *Server) renderStream(ctx context.Context, _ *mcp.CallToolRequest, in re
 	return nil, streamOutput{Markdown: md, Truncated: truncated}, nil
 }
 
-func (s *Server) listTags(ctx context.Context, _ *mcp.CallToolRequest, in listTagsInput) (*mcp.CallToolResult, listTagsOutput, error) {
+func (s *Server) listTags(ctx context.Context, req *mcp.CallToolRequest, in listTagsInput) (*mcp.CallToolResult, listTagsOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, listTagsOutput{}, err
+	}
 	if in.Detailed {
-		tags, err := s.client.ListTagsDetailed(ctx)
+		tags, err := s.service.ListTagsDetailed(ctx, userID)
 		if err != nil {
 			return nil, listTagsOutput{}, err
 		}
 		return nil, listTagsOutput{DetailedTags: tags, Count: len(tags)}, nil
 	}
-	tags, err := s.client.ListTags(ctx, in.Limit)
+	tags, err := s.service.ListTags(ctx, userID, in.Limit)
 	if err != nil {
 		return nil, listTagsOutput{}, err
 	}
 	return nil, listTagsOutput{Tags: tags, Count: len(tags)}, nil
 }
 
-func (s *Server) autocompleteTags(ctx context.Context, _ *mcp.CallToolRequest, in autocompleteTagsInput) (*mcp.CallToolResult, tagsOutput, error) {
+func (s *Server) autocompleteTags(ctx context.Context, req *mcp.CallToolRequest, in autocompleteTagsInput) (*mcp.CallToolResult, tagsOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, tagsOutput{}, err
+	}
 	limit := in.Limit
 	if limit <= 0 || limit > s.cfg.MaxNotes {
 		limit = s.cfg.MaxNotes
 	}
-	tags, err := s.client.AutocompleteTags(ctx, in.Prefix, limit)
+	tags, err := s.service.AutocompleteTags(ctx, userID, in.Prefix, limit)
 	if err != nil {
 		return nil, tagsOutput{}, err
 	}
 	return nil, tagsOutput{Tags: tags, Count: len(tags)}, nil
 }
 
-func (s *Server) listTrash(ctx context.Context, _ *mcp.CallToolRequest, _ emptyInput) (*mcp.CallToolResult, notesOutput, error) {
-	notes, err := s.client.ListTrashed(ctx)
+func (s *Server) listTrash(ctx context.Context, req *mcp.CallToolRequest, _ emptyInput) (*mcp.CallToolResult, notesOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, notesOutput{}, err
+	}
+	notes, err := s.service.ListTrashed(ctx, userID)
 	if err != nil {
 		return nil, notesOutput{}, err
 	}
@@ -291,59 +316,75 @@ func (s *Server) listTrash(ctx context.Context, _ *mcp.CallToolRequest, _ emptyI
 	return nil, notesOutput{Notes: views, Count: len(views), ContentTruncated: truncated}, nil
 }
 
-func (s *Server) getSettings(ctx context.Context, _ *mcp.CallToolRequest, _ emptyInput) (*mcp.CallToolResult, settingsOutput, error) {
-	settings, err := s.client.GetSettings(ctx)
+func (s *Server) getSettings(ctx context.Context, req *mcp.CallToolRequest, _ emptyInput) (*mcp.CallToolResult, settingsOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, settingsOutput{}, err
+	}
+	settings, err := s.service.GetSettings(ctx, userID)
 	if err != nil {
 		return nil, settingsOutput{}, err
 	}
 	return nil, settingsOutput{Settings: *settings}, nil
 }
 
-func (s *Server) createNote(ctx context.Context, _ *mcp.CallToolRequest, in createNoteInput) (*mcp.CallToolResult, noteOutput, error) {
-	resp, err := s.client.CreateNote(ctx, in.Content, in.Tags)
+func (s *Server) createNote(ctx context.Context, req *mcp.CallToolRequest, in createNoteInput) (*mcp.CallToolResult, noteOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, noteOutput{}, err
+	}
+	resp, err := s.service.CreateNote(ctx, userID, model.CreateRequest{Content: in.Content, Tags: in.Tags})
 	if err != nil {
 		return nil, noteOutput{}, err
 	}
 	if in.Pinned {
-		if err := s.client.TogglePin(ctx, resp.ID); err != nil {
+		if err := s.service.TogglePin(ctx, userID, resp.ID); err != nil {
 			return nil, noteOutput{}, err
 		}
 	}
-	note, err := s.client.GetNote(ctx, resp.ID)
+	note, err := s.service.GetNote(ctx, userID, resp.ID)
 	if err != nil {
 		return nil, noteOutput{}, err
 	}
 	return nil, noteOutput{Note: noteView(*note, true)}, nil
 }
 
-func (s *Server) updateNote(ctx context.Context, _ *mcp.CallToolRequest, in updateNoteInput) (*mcp.CallToolResult, noteOutput, error) {
+func (s *Server) updateNote(ctx context.Context, req *mcp.CallToolRequest, in updateNoteInput) (*mcp.CallToolResult, noteOutput, error) {
 	if in.ID == "" {
 		return nil, noteOutput{}, fmt.Errorf("id is required")
 	}
-	req := model.UpdateRequest{Content: in.Content}
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, noteOutput{}, err
+	}
+	updateReq := model.UpdateRequest{Content: in.Content}
 	if in.Tags != nil {
-		req.Tags = &in.Tags
+		updateReq.Tags = &in.Tags
 	}
-	note, err := s.client.UpdateNote(ctx, in.ID, req)
+	note, err := s.service.UpdateNote(ctx, userID, in.ID, updateReq)
 	if err != nil {
 		return nil, noteOutput{}, err
 	}
 	return nil, noteOutput{Note: noteView(*note, true)}, nil
 }
 
-func (s *Server) setNotePinned(ctx context.Context, _ *mcp.CallToolRequest, in setPinnedInput) (*mcp.CallToolResult, noteOutput, error) {
+func (s *Server) setNotePinned(ctx context.Context, req *mcp.CallToolRequest, in setPinnedInput) (*mcp.CallToolResult, noteOutput, error) {
 	if in.ID == "" {
 		return nil, noteOutput{}, fmt.Errorf("id is required")
 	}
-	note, err := s.client.GetNote(ctx, in.ID)
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, noteOutput{}, err
+	}
+	note, err := s.service.GetNote(ctx, userID, in.ID)
 	if err != nil {
 		return nil, noteOutput{}, err
 	}
 	if note.Pinned != in.Pinned {
-		if err := s.client.TogglePin(ctx, in.ID); err != nil {
+		if err := s.service.TogglePin(ctx, userID, in.ID); err != nil {
 			return nil, noteOutput{}, err
 		}
-		note, err = s.client.GetNote(ctx, in.ID)
+		note, err = s.service.GetNote(ctx, userID, in.ID)
 		if err != nil {
 			return nil, noteOutput{}, err
 		}
@@ -351,49 +392,73 @@ func (s *Server) setNotePinned(ctx context.Context, _ *mcp.CallToolRequest, in s
 	return nil, noteOutput{Note: noteView(*note, true)}, nil
 }
 
-func (s *Server) restoreNote(ctx context.Context, _ *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, idOutput, error) {
+func (s *Server) restoreNote(ctx context.Context, req *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, idOutput, error) {
 	if in.ID == "" {
 		return nil, idOutput{}, fmt.Errorf("id is required")
 	}
-	if err := s.client.RestoreNote(ctx, in.ID); err != nil {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, idOutput{}, err
+	}
+	if err := s.service.RestoreNote(ctx, userID, in.ID); err != nil {
 		return nil, idOutput{}, err
 	}
 	return nil, idOutput{ID: in.ID}, nil
 }
 
-func (s *Server) approveTag(ctx context.Context, _ *mcp.CallToolRequest, in tagNameInput) (*mcp.CallToolResult, tagOutput, error) {
-	if err := s.client.ApproveTag(ctx, in.Name); err != nil {
+func (s *Server) approveTag(ctx context.Context, req *mcp.CallToolRequest, in tagNameInput) (*mcp.CallToolResult, tagOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, tagOutput{}, err
+	}
+	if err := s.service.ApproveTag(ctx, userID, in.Name); err != nil {
 		return nil, tagOutput{}, err
 	}
 	return nil, tagOutput{Name: in.Name}, nil
 }
 
-func (s *Server) renameTag(ctx context.Context, _ *mcp.CallToolRequest, in renameTagInput) (*mcp.CallToolResult, tagOutput, error) {
-	if err := s.client.RenameTag(ctx, in.OldName, in.NewName); err != nil {
+func (s *Server) renameTag(ctx context.Context, req *mcp.CallToolRequest, in renameTagInput) (*mcp.CallToolResult, tagOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, tagOutput{}, err
+	}
+	if err := s.service.RenameTag(ctx, userID, in.OldName, in.NewName); err != nil {
 		return nil, tagOutput{}, err
 	}
 	return nil, tagOutput{Name: in.NewName}, nil
 }
 
-func (s *Server) updateTagPriority(ctx context.Context, _ *mcp.CallToolRequest, in updateTagPriorityInput) (*mcp.CallToolResult, tagOutput, error) {
-	if err := s.client.UpdateTagPriority(ctx, in.Name, in.Importance, in.Urgency); err != nil {
+func (s *Server) updateTagPriority(ctx context.Context, req *mcp.CallToolRequest, in updateTagPriorityInput) (*mcp.CallToolResult, tagOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeWrite)
+	if err != nil {
+		return nil, tagOutput{}, err
+	}
+	if err := s.service.UpdateTagPriority(ctx, userID, in.Name, in.Importance, in.Urgency); err != nil {
 		return nil, tagOutput{}, err
 	}
 	return nil, tagOutput{Name: in.Name}, nil
 }
 
-func (s *Server) deleteNote(ctx context.Context, _ *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, idOutput, error) {
+func (s *Server) deleteNote(ctx context.Context, req *mcp.CallToolRequest, in getNoteInput) (*mcp.CallToolResult, idOutput, error) {
 	if in.ID == "" {
 		return nil, idOutput{}, fmt.Errorf("id is required")
 	}
-	if err := s.client.DeleteNote(ctx, in.ID); err != nil {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeDelete)
+	if err != nil {
+		return nil, idOutput{}, err
+	}
+	if err := s.service.DeleteNote(ctx, userID, in.ID); err != nil {
 		return nil, idOutput{}, err
 	}
 	return nil, idOutput{ID: in.ID}, nil
 }
 
-func (s *Server) deleteTag(ctx context.Context, _ *mcp.CallToolRequest, in tagNameInput) (*mcp.CallToolResult, tagOutput, error) {
-	if err := s.client.DeleteTag(ctx, in.Name); err != nil {
+func (s *Server) deleteTag(ctx context.Context, req *mcp.CallToolRequest, in tagNameInput) (*mcp.CallToolResult, tagOutput, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeDelete)
+	if err != nil {
+		return nil, tagOutput{}, err
+	}
+	if err := s.service.DeleteTag(ctx, userID, in.Name); err != nil {
 		return nil, tagOutput{}, err
 	}
 	return nil, tagOutput{Name: in.Name}, nil

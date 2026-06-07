@@ -7,17 +7,23 @@ import (
 	"github.com/runminglu/tag-note/internal/model"
 )
 
-func TestConfigValidateRequiresToken(t *testing.T) {
-	cfg := Config{BaseURL: "http://localhost:3000"}
+func TestConfigValidateRequiresDBPath(t *testing.T) {
+	cfg := Config{PublicURL: "http://localhost:3779"}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("Validate() error = nil")
 	}
 }
 
 func TestConfigValidateDefaultsCaps(t *testing.T) {
-	cfg := Config{Token: "token", MaxNotes: -1, MaxContentBytes: -1}
+	cfg := Config{DBPath: "/tmp/tagnote.db", PublicURL: "http://localhost:3779", MaxNotes: -1, MaxContentBytes: -1}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
+	}
+	if cfg.Addr != ":3001" {
+		t.Fatalf("Addr = %q, want :3001", cfg.Addr)
+	}
+	if cfg.ResourcePath != "/mcp" {
+		t.Fatalf("ResourcePath = %q, want /mcp", cfg.ResourcePath)
 	}
 	if cfg.MaxNotes != defaultMaxNotes {
 		t.Fatalf("MaxNotes = %d, want %d", cfg.MaxNotes, defaultMaxNotes)

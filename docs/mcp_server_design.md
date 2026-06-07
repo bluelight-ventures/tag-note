@@ -1,15 +1,15 @@
 # TagNote MCP Server Design
 
 This document designs a Model Context Protocol server that lets an LLM read and
-act on a user's TagNote data through the existing TagNote API.
+act on a user's TagNote data through a native Streamable HTTP MCP endpoint.
 
 ## Goals
 
 - Let an LLM search, read, create, update, tag, pin, and organize notes.
-- Reuse TagNote's current HTTP API, JWT auth, service behavior, validation,
-  audit logging, and deployment model.
+- Reuse TagNote's current service behavior, validation, SQLite migrations, and
+  deployment model.
 - Use the same long-running HTTP MCP interface locally and in production.
-- Avoid direct SQLite access from the MCP process in the first release.
+- Use native MCP OAuth 2.1 authorization instead of TagNote JWT setup.
 - Keep destructive actions opt-in and leave permanent deletion out of the
   default tool surface.
 
@@ -20,8 +20,7 @@ act on a user's TagNote data through the existing TagNote API.
 - Do not build an LLM into TagNote. The MCP server only exposes TagNote context
   and actions to MCP clients.
 - Do not add UI changes to the web app or iOS app for the first release.
-- Do not claim native MCP OAuth 2.1 authorization support until the browser
-  login and callback flow is implemented.
+- Do not keep a second stdio transport or TagNote-JWT MCP mode.
 
 ## Current TagNote Integration Points
 
@@ -29,16 +28,15 @@ The implementation should start from these existing paths:
 
 | Path | Role |
 | --- | --- |
-| `/Users/runming/workspace/tag_note/internal/apiclient/client.go` | Existing authenticated HTTP client used by CLI tools. Extend this first. |
 | `/Users/runming/workspace/tag_note/internal/model/model.go` | Shared request/response and domain structs. |
 | `/Users/runming/workspace/tag_note/internal/service/service.go` | Business behavior behind notes, tags, trash, import/export, and settings. |
-| `/Users/runming/workspace/tag_note/internal/handler/handler.go` | Existing HTTP route behavior and status mapping. |
-| `/Users/runming/workspace/tag_note/cmd/tagnote-login/main.go` | Existing token bootstrap flow for local users. |
+| `/Users/runming/workspace/tag_note/internal/repo/migrate.go` | SQLite schema for notes, users, and MCP OAuth state. |
+| `/Users/runming/workspace/tag_note/internal/mcpoauth/` | OAuth metadata, dynamic registration, authorization, token, and verifier behavior. |
 | `/Users/runming/workspace/tag_note/Dockerfile` | Canonical build/test path and final image binary list. |
 
-The first MCP server should be an HTTP-backed adapter, not a repository-backed
-adapter. That keeps one write path for all clients and preserves the audit
-middleware already registered on protected HTTP routes.
+The MCP server is repository-backed through `service.Service`, not an HTTP API
+client. That keeps local and production identical and avoids minting broad
+TagNote JWTs for MCP hosts.
 
 ## MCP Shape
 
@@ -90,18 +88,10 @@ Required runtime configuration:
 
 | Variable | Purpose |
 | --- | --- |
-| `TAGNOTE_URL` | TagNote base URL, defaulting to `http://localhost:3000` to match existing CLI behavior inside the container. |
-
-Until native MCP authorization is implemented, HTTP clients can pass a user
-token per request:
-
-```http
-Authorization: Bearer <TagNote JWT>
-```
-
-The intended production design is native MCP Authorization Specification support
-so compatible MCP clients can initiate a connection, discover the auth server,
-open a browser login flow, and receive the token callback automatically.
+| `TAGNOTE_MCP_PUBLIC_URL` | Public MCP origin, defaulting to `http://localhost:3779` locally and `https://mcp.tag-note.com` in production. |
+| `TAGNOTE_DB` | SQLite database path. |
+| `TAGNOTE_UPLOADS` | Upload directory used by existing auth/account cleanup behavior. |
+| `JWT_SECRET` | Existing TagNote secret, reused only to sign short-lived MCP browser-login session cookies. |
 
 ## Native MCP Authorization
 
@@ -134,7 +124,7 @@ Response:
   "resource": "https://mcp.tag-note.com/mcp",
   "authorization_servers": ["https://mcp.tag-note.com"],
   "bearer_methods_supported": ["header"],
-  "resource_signing_alg_values_supported": ["RS256"]
+  "scopes_supported": ["mcp:read", "mcp:write", "mcp:delete"]
 }
 ```
 
@@ -257,13 +247,9 @@ Supported grants:
 
 Access tokens:
 
-- Use asymmetric signing, preferably `RS256`, so MCP can validate via JWKS.
-- Include `iss: "https://mcp.tag-note.com"`.
-- Include `aud: "https://mcp.tag-note.com/mcp"`.
-- Include `sub: <TagNote user ID>`.
-- Include `client_id`.
-- Include `scope`.
-- Expire quickly, for example 15 minutes.
+- Are opaque bearer tokens stored hashed at rest.
+- Bind to TagNote user ID, OAuth client ID, scope, and expiry in SQLite.
+- Expire quickly, currently one hour.
 
 Refresh tokens:
 
@@ -282,7 +268,10 @@ Authorization: Bearer <access-token>
 
 The MCP service validates:
 
-- signature using current JWKS
+- opaque token hash lookup
+- token expiry
+- per-tool OAuth scope
+- session user consistency through the MCP SDK's bearer middleware
 - expiration and not-before timestamps
 - issuer
 - audience/resource binding
@@ -333,9 +322,8 @@ settings.
 
 ### Backward Compatibility
 
-The bearer-JWT shortcut can remain in development only behind an explicit
-`TAGNOTE_MCP_ALLOW_LEGACY_JWT=1` flag. Production should require MCP-issued
-OAuth access tokens once native auth is implemented.
+The stdio and TagNote-JWT MCP modes are removed. Local development uses
+`http://localhost:3779/mcp`, which has the same interface as production.
 
 Optional environment:
 
@@ -401,7 +389,7 @@ Resource templates:
 | `tagnote://search{?tag,q,limit,sort}` | `application/json` | Search note metadata and optional snippets. |
 | `tagnote://stream{?tag,q}` | `text/markdown` | Read a capped Markdown stream. |
 
-The resource and tool implementations should share the same client methods and
+The resource and tool implementations should share the same service methods and
 response capping code.
 
 ## Prompt Surface
@@ -419,35 +407,12 @@ Add these after the core tools:
 Prompts should instruct the model to search/read first, cite note IDs in any
 claim based on note content, and ask before broad write operations.
 
-## HTTP Client Work
+## Service Work
 
-Refactor `/Users/runming/workspace/tag_note/internal/apiclient/client.go` before
-adding MCP handlers:
-
-- Add a `Client` struct with `BaseURL`, `Token`, `HTTPClient`, `UserAgent`, and
-  default timeout.
-- Add context-aware methods:
-  - `CreateNote`
-  - `ListNotes`
-  - `GetNote`
-  - `UpdateNote`
-  - `DeleteNote`
-  - `RestoreNote`
-  - `TogglePin`
-  - `ListTrashed`
-  - `ListTags`
-  - `ListTagsDetailed`
-  - `AutocompleteTags`
-  - `ApproveTag`
-  - `RenameTag`
-  - `DeleteTag`
-  - `UpdateTagPriority`
-  - `GetSettings`
-  - `SaveSettings`
-  - `RenderStream`
-- Preserve existing package-level functions so current CLI tools keep working.
-- Fix status handling consistently. Some existing methods decode responses
-  without checking non-2xx status first; MCP should not inherit that behavior.
+MCP handlers use `/Users/runming/workspace/tag_note/internal/service/service.go`
+directly with the user ID from OAuth token metadata. This keeps note and tag
+behavior shared with the existing web API while avoiding a second HTTP hop and
+avoiding TagNote JWTs in MCP hosts.
 
 ## Server Package Design
 
@@ -460,15 +425,18 @@ tools.go       tool handlers
 resources.go   resource handlers and URI parsing
 prompts.go     prompt definitions
 caps.go        result size caps and note redaction helpers
-errors.go      TagNote/API errors to MCP tool errors
+auth.go        token metadata and scope helpers
 ```
 
 Core types:
 
 ```go
 type Config struct {
-    BaseURL         string
-    Token           string
+    Addr            string
+    DBPath          string
+    UploadsDir      string
+    PublicURL       string
+    ResourcePath    string
     ReadOnly        bool
     AllowDelete     bool
     MaxNotes        int
@@ -476,8 +444,8 @@ type Config struct {
 }
 
 type Server struct {
-    cfg    Config
-    client *apiclient.Client
+    cfg     Config
+    service *service.Service
 }
 ```
 
@@ -497,8 +465,8 @@ about.
   notebook to the model.
 - Do not expose raw upload filesystem paths. Preserve existing `/uploads/...`
   links only as note content.
-- Set `User-Agent: tagnote-mcp/<version>` on API requests so audit logs can
-  identify MCP activity.
+- Audit logging for MCP tool calls should be added with user ID, client ID,
+  tool/resource name, status, and source IP without token material.
 - Disable destructive tools unless explicitly enabled.
 - Prefer idempotent tools. For pinning, implement `set_note_pinned` by reading
   current state before toggling.
@@ -518,13 +486,13 @@ production: https://mcp.tag-note.com/mcp
 The preferred service design is:
 
 - `tagnote-mcp -addr :3001`
-- Require `Authorization: Bearer <TagNote JWT>` on MCP HTTP requests.
-- Validate JWTs using `/api/v1/auth/me` or shared `AuthService`.
-- Keep per-request user scoping from the bearer token, not from tool arguments.
+- Require `Authorization: Bearer <MCP OAuth access token>` on MCP HTTP
+  requests.
+- Validate opaque OAuth tokens through `/Users/runming/workspace/tag_note/internal/mcpoauth/`.
+- Keep per-request user scoping from token metadata, not from tool arguments.
 - Route production through Caddy at `https://mcp.tag-note.com/mcp`.
 
-Native MCP OAuth 2.1 authorization must be part of the HTTP release, not a later
-compatibility patch.
+Native MCP OAuth 2.1 authorization is part of the HTTP release.
 
 ## Implementation Plan
 
@@ -533,17 +501,19 @@ compatibility patch.
    - Update `/Users/runming/workspace/tag_note/go.mod` and
      `/Users/runming/workspace/tag_note/go.sum`.
 
-2. Refactor the API client.
-   - Introduce context-aware `apiclient.Client`.
-   - Add missing note/tag/settings/trash methods.
-   - Preserve the existing CLI helper functions.
-   - Add unit tests with `httptest`.
+2. Add `/Users/runming/workspace/tag_note/internal/mcpoauth/`.
+   - Publish protected-resource metadata.
+   - Publish authorization-server metadata.
+   - Support dynamic client registration for public PKCE clients.
+   - Implement browser login, consent, code exchange, refresh rotation, and
+     bearer-token verification.
+   - Store only token/code hashes in SQLite.
 
 3. Add `/Users/runming/workspace/tag_note/internal/mcpserver/`.
    - Load config from environment and flags.
-   - Construct an MCP server with Streamable HTTP transport.
+   - Construct an MCP server for Streamable HTTP.
    - Register read tools first.
-   - Add output caps and consistent API error mapping.
+   - Add output caps and consistent service error mapping.
 
 4. Add write tools.
    - Register write tools only when not read-only.
@@ -551,38 +521,36 @@ compatibility patch.
    - Implement `tagnote_set_note_pinned` idempotently.
 
 5. Add resources and prompts.
-   - Reuse the same client methods as tools.
+   - Reuse the same service methods as tools.
    - Keep resources read-only and capped.
    - Add prompts once the tool names and schemas settle.
 
 6. Add `/Users/runming/workspace/tag_note/cmd/tagnote-mcp/main.go`.
    - Default to HTTP on `:3001`.
-   - Require bearer authorization per HTTP request.
+   - Require MCP OAuth bearer authorization per HTTP request.
 
 7. Wire build and docs.
    - Add `tagnote-mcp` to `/Users/runming/workspace/tag_note/Dockerfile`.
    - Document configuration in `/Users/runming/workspace/tag_note/README.md`.
-   - Add a short MCP section to `/Users/runming/workspace/tag_note/TESTING.md`.
+   - Add local and production Compose services.
+   - Route production through Caddy at `https://mcp.tag-note.com/mcp`.
 
 8. Verify.
    - Run `docker build --target test .`.
-   - Run `docker compose build`.
-   - Run local API smoke tests through `tagnote-mcp` against
-     `TAGNOTE_TEST_MODE=1`.
-   - Run MCP Inspector from Docker if Node tooling is needed.
+   - Run `docker compose build tagnote-mcp`.
+   - Smoke-test local metadata, DCR, and bearer challenge endpoints.
 
 ## Test Plan
 
-- Unit-test `apiclient.Client` status handling, auth header behavior, query
-  encoding, JSON decoding, and context cancellation.
-- Unit-test MCP tool handlers with a fake API client interface.
-- Integration-test against a running TagNote container:
-  - login as `test@test.com`
+- E2E-test native OAuth dynamic registration, browser-login approval, code
+  exchange, bearer verification, and refresh rotation.
+- E2E-test MCP over Streamable HTTP with bearer auth:
   - create a note through MCP
   - search it through MCP
   - update tags through MCP
   - pin/unpin through MCP
-  - soft-delete only when delete is explicitly enabled
+  - read a resource through MCP
+  - reject unauthenticated `/mcp` requests with protected-resource metadata
 - Confirm read-only mode exposes no write tools.
 - Confirm content caps truncate large responses and report truncation metadata.
 - Confirm unauthenticated HTTP MCP requests fail and authenticated requests can
@@ -602,12 +570,8 @@ compatibility patch.
 
 ## Open Questions
 
-- Should `tagnote-login` gain a non-interactive `--print-token` or
-  `--json` mode to make MCP setup easier?
 - Should TagNote add an idempotent HTTP endpoint for pin state instead of MCP
   read-then-toggle behavior?
-- Should a future remote MCP endpoint use TagNote JWTs directly or add a
-  narrower MCP-scoped token type?
 - Should image upload be exposed later as a tool, or should MCP only work with
   Markdown text and existing image URLs?
 

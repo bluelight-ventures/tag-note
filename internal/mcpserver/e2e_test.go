@@ -3,31 +3,32 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
+	sdkauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"golang.org/x/oauth2"
 
-	"github.com/runminglu/tag-note/internal/model"
+	"github.com/runminglu/tag-note/internal/mcpoauth"
+	"github.com/runminglu/tag-note/internal/repo"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
 func TestMCPE2ECreateSearchUpdateAndReadResource(t *testing.T) {
-	api := newFakeTagNoteAPI(t)
-	defer api.server.Close()
-
 	ctx := context.Background()
-	clientSession, closeSessions := connectMCPForTest(t, ctx, Config{
-		BaseURL:         api.server.URL,
-		Token:           "test-token",
+	clientSession, closeSessions := connectHTTPMCPForTest(t, ctx, Config{
+		DBPath:          "unused",
+		PublicURL:       "http://localhost:3779",
+		ResourcePath:    "/mcp",
 		MaxNotes:        10,
 		MaxContentBytes: 10000,
-	}, "test")
+	}, "test-user", []string{mcpoauth.ScopeRead, mcpoauth.ScopeWrite, mcpoauth.ScopeDelete})
 	defer closeSessions()
 
 	tools, err := clientSession.ListTools(ctx, nil)
@@ -41,7 +42,7 @@ func TestMCPE2ECreateSearchUpdateAndReadResource(t *testing.T) {
 	createResult, err := clientSession.CallTool(ctx, &mcp.CallToolParams{
 		Name: "tagnote_create_note",
 		Arguments: map[string]any{
-			"content": "Created through MCP",
+			"content": "Created through HTTP MCP",
 			"tags":    []string{"mcp", "e2e"},
 			"pinned":  true,
 		},
@@ -74,11 +75,11 @@ func TestMCPE2ECreateSearchUpdateAndReadResource(t *testing.T) {
 	if search.Count != 1 {
 		t.Fatalf("search count = %d, want 1", search.Count)
 	}
-	if search.Notes[0].Content != "Created through MCP" {
+	if search.Notes[0].Content != "Created through HTTP MCP" {
 		t.Fatalf("search note content = %q", search.Notes[0].Content)
 	}
 
-	updatedContent := "Updated through MCP"
+	updatedContent := "Updated through HTTP MCP"
 	updateResult, err := clientSession.CallTool(ctx, &mcp.CallToolParams{
 		Name: "tagnote_update_note",
 		Arguments: map[string]any{
@@ -130,17 +131,15 @@ func TestMCPE2ECreateSearchUpdateAndReadResource(t *testing.T) {
 }
 
 func TestMCPE2EReadOnlyModeHidesWriteTools(t *testing.T) {
-	api := newFakeTagNoteAPI(t)
-	defer api.server.Close()
-
 	ctx := context.Background()
-	clientSession, closeSessions := connectMCPForTest(t, ctx, Config{
-		BaseURL:         api.server.URL,
-		Token:           "test-token",
+	clientSession, closeSessions := connectHTTPMCPForTest(t, ctx, Config{
+		DBPath:          "unused",
+		PublicURL:       "http://localhost:3779",
+		ResourcePath:    "/mcp",
 		ReadOnly:        true,
 		MaxNotes:        10,
 		MaxContentBytes: 10000,
-	}, "test")
+	}, "test-user", []string{mcpoauth.ScopeRead})
 	defer closeSessions()
 
 	tools, err := clientSession.ListTools(ctx, nil)
@@ -155,27 +154,106 @@ func TestMCPE2EReadOnlyModeHidesWriteTools(t *testing.T) {
 	}
 }
 
-func connectMCPForTest(t *testing.T, ctx context.Context, cfg Config, version string) (*mcp.ClientSession, func()) {
-	t.Helper()
-	server, err := New(cfg, version)
+func TestMCPE2ERequiresBearerToken(t *testing.T) {
+	ctx := context.Background()
+	_, closeServer, endpoint := startHTTPMCPForTest(t, ctx, Config{
+		DBPath:          "unused",
+		PublicURL:       "http://localhost:3779",
+		ResourcePath:    "/mcp",
+		MaxNotes:        10,
+		MaxContentBytes: 10000,
+	}, "test-user", []string{mcpoauth.ScopeRead})
+	defer closeServer()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`))
 	if err != nil {
-		t.Fatalf("New() error = %v", err)
+		t.Fatal(err)
 	}
-	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatalf("server Connect() error = %v", err)
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want 401: %s", resp.StatusCode, body)
+	}
+	if got := resp.Header.Get("WWW-Authenticate"); !strings.Contains(got, `resource_metadata="http://localhost:3779/.well-known/oauth-protected-resource/mcp"`) {
+		t.Fatalf("WWW-Authenticate = %q", got)
+	}
+}
+
+func connectHTTPMCPForTest(t *testing.T, ctx context.Context, cfg Config, userID string, scopes []string) (*mcp.ClientSession, func()) {
+	t.Helper()
+	_, closeServer, endpoint := startHTTPMCPForTest(t, ctx, cfg, userID, scopes)
+	transport := &mcp.StreamableClientTransport{
+		Endpoint: endpoint,
+		OAuthHandler: staticOAuthHandler{
+			token: &oauth2.Token{AccessToken: "test-access-token", TokenType: "Bearer"},
+		},
 	}
 	client := mcp.NewClient(&mcp.Implementation{Name: "tagnote-mcp-e2e", Version: "test"}, nil)
-	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	clientSession, err := client.Connect(ctx, transport, nil)
 	if err != nil {
-		serverSession.Close()
+		closeServer()
 		t.Fatalf("client Connect() error = %v", err)
 	}
 	return clientSession, func() {
 		clientSession.Close()
-		serverSession.Close()
+		closeServer()
 	}
+}
+
+func startHTTPMCPForTest(t *testing.T, ctx context.Context, cfg Config, userID string, scopes []string) (*httptest.Server, func(), string) {
+	t.Helper()
+	store, err := repo.NewSQLiteRepo(t.TempDir() + "/tagnote.db")
+	if err != nil {
+		t.Fatalf("NewSQLiteRepo() error = %v", err)
+	}
+	if err := store.CreateUser(ctx, userID, "mcp-e2e@example.com", "hash", "MCP E2E", time.Now().UTC()); err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
+	}
+	server, err := New(cfg, service.New(store), "test")
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	streamHandler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
+		return server
+	}, nil)
+	verifier := func(_ context.Context, token string, _ *http.Request) (*sdkauth.TokenInfo, error) {
+		if token != "test-access-token" {
+			return nil, sdkauth.ErrInvalidToken
+		}
+		return &sdkauth.TokenInfo{
+			Scopes:     scopes,
+			UserID:     userID,
+			Expiration: time.Now().Add(time.Hour),
+		}, nil
+	}
+	mux := http.NewServeMux()
+	mux.Handle(cfg.ResourcePath, sdkauth.RequireBearerToken(verifier, &sdkauth.RequireBearerTokenOptions{
+		ResourceMetadataURL: cfg.ResourceMetadataURL(),
+	})(streamHandler))
+	httpServer := httptest.NewServer(mux)
+	return httpServer, func() {
+		httpServer.Close()
+		store.Close()
+	}, httpServer.URL + cfg.ResourcePath
+}
+
+type staticOAuthHandler struct {
+	token *oauth2.Token
+}
+
+func (h staticOAuthHandler) TokenSource(context.Context) (oauth2.TokenSource, error) {
+	return oauth2.StaticTokenSource(h.token), nil
+}
+
+func (h staticOAuthHandler) Authorize(_ context.Context, _ *http.Request, resp *http.Response) error {
+	resp.Body.Close()
+	return nil
 }
 
 func assertToolOK(t *testing.T, result *mcp.CallToolResult) {
@@ -223,178 +301,4 @@ func toolNames(tools []*mcp.Tool) []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-type fakeTagNoteAPI struct {
-	t      *testing.T
-	server *httptest.Server
-	mu     sync.Mutex
-	nextID int
-	notes  map[string]model.SubNote
-}
-
-func newFakeTagNoteAPI(t *testing.T) *fakeTagNoteAPI {
-	api := &fakeTagNoteAPI{
-		t:      t,
-		nextID: 1,
-		notes:  make(map[string]model.SubNote),
-	}
-	api.server = httptest.NewServer(http.HandlerFunc(api.serveHTTP))
-	return api
-}
-
-func (a *fakeTagNoteAPI) serveHTTP(w http.ResponseWriter, r *http.Request) {
-	if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
-		http.Error(w, `{"error":"missing or invalid token"}`, http.StatusUnauthorized)
-		return
-	}
-	if r.URL.Path == "/api/v1/notes" {
-		switch r.Method {
-		case http.MethodPost:
-			a.createNote(w, r)
-			return
-		case http.MethodGet:
-			a.listNotes(w, r)
-			return
-		}
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/v1/notes/") {
-		a.noteByID(w, r)
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func (a *fakeTagNoteAPI) createNote(w http.ResponseWriter, r *http.Request) {
-	var req model.CreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid request"}`, http.StatusBadRequest)
-		return
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	id := fmt.Sprintf("01MCP%021d", a.nextID)
-	a.nextID++
-	createdAt := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
-	a.notes[id] = model.SubNote{
-		ID:        id,
-		ShortID:   model.MakeShortID(id),
-		Content:   req.Content,
-		CreatedAt: createdAt,
-		Tags:      append([]string(nil), req.Tags...),
-	}
-	writeJSON(w, http.StatusCreated, model.CreateResponse{ID: id, ShortID: model.MakeShortID(id), CreatedAt: createdAt})
-}
-
-func (a *fakeTagNoteAPI) listNotes(w http.ResponseWriter, r *http.Request) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	var notes []model.SubNote
-	for _, note := range a.notes {
-		if matchesTags(note.Tags, r.URL.Query()["tag"]) && matchesQuery(note.Content, r.URL.Query().Get("q")) {
-			notes = append(notes, note)
-		}
-	}
-	sort.Slice(notes, func(i, j int) bool { return notes[i].ID < notes[j].ID })
-	writeJSON(w, http.StatusOK, notes)
-}
-
-func (a *fakeTagNoteAPI) noteByID(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/api/v1/notes/")
-	if strings.HasSuffix(path, "/pin") {
-		id := strings.TrimSuffix(path, "/pin")
-		if r.Method != http.MethodPut {
-			http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
-			return
-		}
-		a.togglePin(w, id)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		a.getNote(w, path)
-	case http.MethodPut:
-		a.updateNote(w, r, path)
-	default:
-		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
-	}
-}
-
-func (a *fakeTagNoteAPI) getNote(w http.ResponseWriter, id string) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	note, ok := a.notes[id]
-	if !ok {
-		http.Error(w, `{"error":"note not found"}`, http.StatusNotFound)
-		return
-	}
-	writeJSON(w, http.StatusOK, note)
-}
-
-func (a *fakeTagNoteAPI) updateNote(w http.ResponseWriter, r *http.Request, id string) {
-	var req model.UpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid request"}`, http.StatusBadRequest)
-		return
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	note, ok := a.notes[id]
-	if !ok {
-		http.Error(w, `{"error":"note not found"}`, http.StatusNotFound)
-		return
-	}
-	if req.Content != nil {
-		note.Content = *req.Content
-		now := time.Date(2026, 6, 7, 12, 30, 0, 0, time.UTC)
-		note.UpdatedAt = &now
-	}
-	if req.Tags != nil {
-		note.Tags = append([]string(nil), (*req.Tags)...)
-	}
-	a.notes[id] = note
-	writeJSON(w, http.StatusOK, note)
-}
-
-func (a *fakeTagNoteAPI) togglePin(w http.ResponseWriter, id string) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	note, ok := a.notes[id]
-	if !ok {
-		http.Error(w, `{"error":"note not found"}`, http.StatusNotFound)
-		return
-	}
-	note.Pinned = !note.Pinned
-	a.notes[id] = note
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func matchesTags(noteTags, required []string) bool {
-	for _, req := range required {
-		found := false
-		for _, tag := range noteTags {
-			if tag == req {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
-func matchesQuery(content, query string) bool {
-	if query == "" {
-		return true
-	}
-	return strings.Contains(strings.ToLower(content), strings.ToLower(query))
-}
-
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
 }

@@ -112,19 +112,20 @@ scp "$PROJECT_DIR/docker-compose.prod.yml" "${DEPLOY_HOST}:${PROD_DIR}/docker-co
 scp "$PROJECT_DIR/Caddyfile" "${DEPLOY_HOST}:${PROD_DIR}/Caddyfile"
 ok "Server .env updated, configs copied, rollback files saved"
 
-# Step 6: Restart container and reconnect to monitoring network
-info "Step 6/8: Restarting tagnote container..."
+# Step 6: Restart containers and reconnect to monitoring network
+info "Step 6/8: Restarting TagNote web, MCP, and proxy containers..."
 ssh "$DEPLOY_HOST" "
     cd ${PROD_DIR}
-    docker compose up -d tagnote
+    docker compose up -d tagnote tagnote-mcp caddy
 
     # Reconnect to monitoring network if it exists
     if docker network inspect tagnote-network > /dev/null 2>&1; then
         docker network connect tagnote-network \$(docker compose ps -q tagnote) 2>/dev/null || true
+        docker network connect tagnote-network \$(docker compose ps -q tagnote-mcp) 2>/dev/null || true
         docker network connect tagnote-network \$(docker compose ps -q caddy) 2>/dev/null || true
     fi
 "
-ok "Container restarted"
+ok "Containers restarted"
 
 # Step 7: Health verification
 info "Step 7/8: Verifying deployment..."

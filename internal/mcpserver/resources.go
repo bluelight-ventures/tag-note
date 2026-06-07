@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/runminglu/tag-note/internal/mcpoauth"
 )
 
 func (s *Server) registerResources(server *mcp.Server) {
@@ -63,6 +65,10 @@ func (s *Server) registerResources(server *mcp.Server) {
 }
 
 func (s *Server) readResource(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+	userID, err := userIDFromToken(req.Extra.TokenInfo, mcpoauth.ScopeRead)
+	if err != nil {
+		return nil, err
+	}
 	uri := req.Params.URI
 	parsed, err := url.Parse(uri)
 	if err != nil {
@@ -74,19 +80,19 @@ func (s *Server) readResource(ctx context.Context, req *mcp.ReadResourceRequest)
 
 	switch parsed.Host {
 	case "tags":
-		tags, err := s.client.ListTagsDetailed(ctx)
+		tags, err := s.service.ListTagsDetailed(ctx, userID)
 		if err != nil {
 			return nil, err
 		}
 		return jsonResource(uri, tags)
 	case "settings":
-		settings, err := s.client.GetSettings(ctx)
+		settings, err := s.service.GetSettings(ctx, userID)
 		if err != nil {
 			return nil, err
 		}
 		return jsonResource(uri, settings)
 	case "trash":
-		notes, err := s.client.ListTrashed(ctx)
+		notes, err := s.service.ListTrashed(ctx, userID)
 		if err != nil {
 			return nil, err
 		}
@@ -96,23 +102,23 @@ func (s *Server) readResource(ctx context.Context, req *mcp.ReadResourceRequest)
 		views, _ := noteViews(notes, true, s.cfg.MaxContentBytes)
 		return jsonResource(uri, notesOutput{Notes: views, Count: len(views)})
 	case "notes":
-		return s.readNoteResource(ctx, uri, strings.TrimPrefix(parsed.Path, "/"))
+		return s.readNoteResource(ctx, userID, uri, strings.TrimPrefix(parsed.Path, "/"))
 	case "search":
-		return s.readSearchResource(ctx, uri, parsed.Query())
+		return s.readSearchResource(ctx, userID, uri, parsed.Query())
 	case "stream":
-		return s.readStreamResource(ctx, uri, parsed.Query())
+		return s.readStreamResource(ctx, userID, uri, parsed.Query())
 	default:
 		return nil, mcp.ResourceNotFoundError(uri)
 	}
 }
 
-func (s *Server) readNoteResource(ctx context.Context, uri, idPath string) (*mcp.ReadResourceResult, error) {
+func (s *Server) readNoteResource(ctx context.Context, userID, uri, idPath string) (*mcp.ReadResourceResult, error) {
 	asMarkdown := strings.HasSuffix(idPath, ".md")
 	id := strings.TrimSuffix(idPath, ".md")
 	if id == "" {
 		return nil, mcp.ResourceNotFoundError(uri)
 	}
-	note, err := s.client.GetNote(ctx, id)
+	note, err := s.service.GetNote(ctx, userID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -125,9 +131,9 @@ func (s *Server) readNoteResource(ctx context.Context, uri, idPath string) (*mcp
 	return jsonResource(uri, noteOutput{Note: view})
 }
 
-func (s *Server) readSearchResource(ctx context.Context, uri string, query url.Values) (*mcp.ReadResourceResult, error) {
+func (s *Server) readSearchResource(ctx context.Context, userID, uri string, query url.Values) (*mcp.ReadResourceResult, error) {
 	limit := s.cappedLimit(parsePositiveInt(query.Get("limit")))
-	notes, err := s.client.ListNotes(ctx, query["tag"], query.Get("q"), limit, 0, query.Get("sort"))
+	notes, err := s.service.ReadNotes(ctx, userID, query["tag"], query.Get("q"), limit, 0, query.Get("sort"))
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +141,8 @@ func (s *Server) readSearchResource(ctx context.Context, uri string, query url.V
 	return jsonResource(uri, notesOutput{Notes: views, Count: len(views), ContentTruncated: truncated})
 }
 
-func (s *Server) readStreamResource(ctx context.Context, uri string, query url.Values) (*mcp.ReadResourceResult, error) {
-	md, err := s.client.RenderStream(ctx, query["tag"], query.Get("q"))
+func (s *Server) readStreamResource(ctx context.Context, userID, uri string, query url.Values) (*mcp.ReadResourceResult, error) {
+	md, err := s.service.RenderStream(ctx, userID, query["tag"], query.Get("q"))
 	if err != nil {
 		return nil, err
 	}

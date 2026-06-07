@@ -84,7 +84,7 @@ local Docker build
   -> SSH transfer
   -> docker load on server
   -> update TAGNOTE_IMAGE in .env
-  -> docker compose up -d tagnote
+  -> docker compose up -d tagnote tagnote-mcp caddy
   -> verify /healthz
   -> verify https://mcp.tag-note.com/mcp
 ```
@@ -95,9 +95,10 @@ The production MCP endpoint is:
 https://mcp.tag-note.com/mcp
 ```
 
-Native MCP OAuth 2.1 authorization with browser-based login and secure callback
-handling is not implemented yet. Until that exists, MCP clients must send a
-TagNote bearer token explicitly.
+The endpoint supports native MCP OAuth 2.1 authorization. MCP clients discover
+protected-resource metadata from `/mcp`, dynamically register, open the browser
+authorization URL, and receive OAuth bearer tokens after TagNote login and
+approval.
 
 To verify the MCP endpoint independently:
 

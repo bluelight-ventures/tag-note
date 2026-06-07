@@ -3,26 +3,23 @@ package mcpserver
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/runminglu/tag-note/internal/apiclient"
+	"github.com/runminglu/tag-note/internal/service"
 )
 
-// Server holds TagNote MCP handlers and shared API client state.
+// Server holds TagNote MCP handlers and shared service state.
 type Server struct {
-	cfg    Config
-	client *apiclient.Client
+	cfg     Config
+	service *service.Service
 }
 
 // New constructs an MCP server for TagNote.
-func New(cfg Config, version string) (*mcp.Server, error) {
+func New(cfg Config, svc *service.Service, version string) (*mcp.Server, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	client := apiclient.New(cfg.BaseURL, cfg.Token)
-	client.UserAgent = "tagnote-mcp/" + version
-
 	tagNote := &Server{
-		cfg:    cfg,
-		client: client,
+		cfg:     cfg,
+		service: svc,
 	}
 
 	server := mcp.NewServer(&mcp.Implementation{

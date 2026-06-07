@@ -181,6 +181,52 @@ func Migrate(db *sql.DB) error {
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_magic_link_tokens_token ON magic_link_tokens(token)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_magic_link_tokens_user_id ON magic_link_tokens(user_id)`)
 
+	// --- MCP OAuth 2.1 migration ---
+	db.Exec(`CREATE TABLE IF NOT EXISTS oauth_clients (
+		client_id                  TEXT PRIMARY KEY,
+		client_name                TEXT,
+		redirect_uris              TEXT NOT NULL,
+		scope                      TEXT NOT NULL,
+		token_endpoint_auth_method TEXT NOT NULL DEFAULT 'none',
+		created_at                 TEXT NOT NULL
+	)`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
+		code_hash             TEXT PRIMARY KEY,
+		client_id             TEXT NOT NULL REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+		user_id               TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		redirect_uri          TEXT NOT NULL,
+		scope                 TEXT NOT NULL,
+		code_challenge        TEXT NOT NULL,
+		code_challenge_method TEXT NOT NULL,
+		expires_at            TEXT NOT NULL,
+		created_at            TEXT NOT NULL
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_oauth_authorization_codes_client_id ON oauth_authorization_codes(client_id)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_oauth_authorization_codes_user_id ON oauth_authorization_codes(user_id)`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS oauth_access_tokens (
+		token_hash TEXT PRIMARY KEY,
+		client_id  TEXT NOT NULL REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+		user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		scope      TEXT NOT NULL,
+		expires_at TEXT NOT NULL,
+		created_at TEXT NOT NULL
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_oauth_access_tokens_user_id ON oauth_access_tokens(user_id)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_oauth_access_tokens_expires_at ON oauth_access_tokens(expires_at)`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
+		token_hash TEXT PRIMARY KEY,
+		client_id  TEXT NOT NULL REFERENCES oauth_clients(client_id) ON DELETE CASCADE,
+		user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		scope      TEXT NOT NULL,
+		expires_at TEXT NOT NULL,
+		created_at TEXT NOT NULL,
+		revoked_at TEXT
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_oauth_refresh_tokens_user_id ON oauth_refresh_tokens(user_id)`)
+
 	// The uploads table backs account-scoped upload ownership and deletion. It
 	// is defined in the error-checked schema block above so a failure to create
 	// it fails startup.

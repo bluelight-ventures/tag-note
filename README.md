@@ -205,29 +205,42 @@ where the CLI runs.
 
 ## MCP Server
 
-TagNote's MCP endpoint is planned as a long-running Streamable HTTP service at:
+TagNote's MCP endpoint is a long-running Streamable HTTP service at:
 
 ```text
 https://mcp.tag-note.com/mcp
 ```
 
-It lets MCP hosts search, read, create, update, pin, restore, and organize
-TagNote notes through the existing authenticated API.
+Local Docker Compose exposes the same interface at:
 
-Authentication:
-
-```http
-Authorization: Bearer <TagNote JWT>
+```text
+http://localhost:3779/mcp
 ```
 
-Native MCP OAuth 2.1 authorization with browser-based login and secure callback
-handling is not implemented yet.
+It lets MCP hosts search, read, create, update, pin, restore, and organize
+TagNote notes for the authenticated user.
+
+Authentication uses the native MCP OAuth 2.1 authorization flow:
+
+```text
+GET  /.well-known/oauth-protected-resource/mcp
+GET  /.well-known/oauth-authorization-server
+POST /oauth/register
+GET  /oauth/authorize
+POST /oauth/token
+```
+
+MCP hosts should connect directly to the `/mcp` URL. The server advertises
+protected-resource metadata, supports dynamic client registration, uses PKCE
+S256 authorization-code exchange, and prompts the user for TagNote browser
+login/approval before issuing OAuth bearer tokens.
 
 Optional safety controls:
 
 | Variable | Purpose |
 | --- | --- |
 | `TAGNOTE_MCP_READ_ONLY=1` | Register only read-only tools and resources. |
+| `TAGNOTE_MCP_ALLOW_DELETE=1` | Enable soft-delete note and delete-tag tools. |
 | `TAGNOTE_MCP_ALLOW_DELETE=1` | Register soft-delete tools. Permanent delete is not exposed. |
 | `TAGNOTE_MCP_MAX_NOTES=50` | Cap notes returned by one MCP response. |
 | `TAGNOTE_MCP_MAX_CONTENT_BYTES=200000` | Cap content bytes returned by one MCP response. |
