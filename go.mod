@@ -10,8 +10,9 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/oklog/ulid/v2 v2.1.0
+	github.com/oklog/ulid/v2 v2.1.1
 	golang.org/x/crypto v0.52.0
+	golang.org/x/oauth2 v0.35.0
 	modernc.org/sqlite v1.34.5
 )
 
@@ -41,7 +42,6 @@ require (
 	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	modernc.org/libc v1.55.3 // indirect
