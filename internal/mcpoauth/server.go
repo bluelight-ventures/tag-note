@@ -193,7 +193,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	scope := normalizeRequestedScope(req.Scope)
 	if scope == "" {
-		scope = ScopeRead + " " + ScopeWrite
+		scope = strings.Join(supportedScopes, " ")
 	}
 	method := req.TokenEndpointAuthMethod
 	if method == "" {
