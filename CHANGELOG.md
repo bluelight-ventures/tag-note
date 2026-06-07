@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-06-07
+
+### Added
+
+- Added a production TagNote MCP server, including note search/read/write
+  tools, tag resources, guided prompts, OAuth-backed authorization, and a
+  dedicated `tagnote-mcp` container exposed at `https://mcp.tag-note.com/mcp`.
+- Added an iOS Share Extension for saving shared links, text, and page metadata
+  into TagNote, with an option to open TagNote after posting and an App Group
+  hand-off so shared notes appear immediately in the main app.
+- Added iOS App Intents support with a "Save to TagNote" shortcut and a "New
+  note" Home Screen quick action.
+- Added a native iOS markdown editing surface with selection-aware toolbar
+  actions, smart list handling, and a quick numbers/symbols row above the
+  keyboard.
+
+### Changed
+
+- The MCP service now runs over HTTP with TagNote-native OAuth metadata,
+  dynamic client registration, login, and token handling.
+- The release pipeline now restarts and verifies the MCP server during
+  production deploys.
+- iOS note reading and editing were refined for full-screen phone reading,
+  keyboard-following editor controls, pull-to-refresh coverage, and cleaner
+  foreground refresh behavior.
+
+### Fixed
+
+- Fixed iOS share redirect reliability, including the "Open TagNote after
+  posting" flow from Safari.
+- Fixed `$default` tag chip display so it appears without a `#` prefix.
+- Fixed CI and E2E coverage around iOS markdown editing, share flows, and
+  pull-to-refresh behavior.
+
+---
+
 ## [1.7.0] - 2026-06-05
 
 ### Added
@@ -425,7 +461,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/runminglu/tag-note/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/runminglu/tag-note/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/runminglu/tag-note/compare/v1.6.5...v1.7.0
 [1.6.5]: https://github.com/runminglu/tag-note/compare/v1.6.4...v1.6.5
 [1.6.4]: https://github.com/runminglu/tag-note/compare/v1.6.3...v1.6.4
